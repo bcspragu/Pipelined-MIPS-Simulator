@@ -16,15 +16,18 @@ int whichSet(unsigned int);
 int offsetLength();
 int tagLength();
 unsigned int tagBits(unsigned int);
-int hitWay(unsigned int, unsigned int**);
+int hitWay(unsigned int);
 unsigned int indexBits(unsigned int);
 int pow2(int);
-void initializeCache(unsigned int**, int**);
-void loadTrace(char*, unsigned int**, int**);
+void initializeCache();
+void loadTrace(char*);
+void updateOnMiss(unsigned int);
+void updateOnHit(unsigned int);
+
 
 int main(){
   initializeCache(tagArray, lruArray);
-  loadTrace("trace1.txt",tagArray,lruArray);
+  loadTrace("trace1.txt");
   return 0;
 };
 
@@ -69,11 +72,13 @@ int tagLength(){
   return (ADDRESS_SIZE-(offsetLength()+setIndexLength()));
 };
 
+//Author Brandon Sprague
 unsigned int tagBits(unsigned int address){
   int tagSize = tagLength();
   return address >> (ADDRESS_SIZE - tagSize);
 }
 
+//Author Brandon Sprague
 unsigned int indexBits(unsigned int address){
   unsigned int index = address >> offsetLength();
   //Will evaluate to a binary number with setIndexLength() 1s
@@ -82,16 +87,16 @@ unsigned int indexBits(unsigned int address){
   return address & mask;
 }
 
-int hitWay(unsigned int address, unsigned int **tagArray){
+//Author brandon Sprague
+int hitWay(unsigned int address){
   int set = whichSet(address);
-  int numWays = numberOfWays(L,K,C);
-  int offset = offsetLength(L);
-  int length = setIndexLength(K);
+  int numWays = numberOfWays();
   unsigned int *ways = tagArray[set];
+  int *lruWays = lruArray[set];
   unsigned int tag = tagBits(address);
   int i = 0;
   while(i < numWays){
-    if(ways[i] == tag){
+    if(ways[i] == tag && lruWays[i] != -1){
       return i;
     }
     i++;
@@ -100,6 +105,7 @@ int hitWay(unsigned int address, unsigned int **tagArray){
 }
 
 //Returns 2^exponent for integer exponent >= 0
+//Author Brandon Sprague
 int pow2(int exponent){
   int base = 1;
   while(exponent > 0){
@@ -109,7 +115,8 @@ int pow2(int exponent){
   return base;
 }
 
-void initializeCache(unsigned int **tagArray, int **lruArray){
+//Author Zach Boynton && Brandon Sprague
+void initializeCache(){
   int sets = K;
   int ways = numberOfWays();
   int i,j;
@@ -129,17 +136,49 @@ void initializeCache(unsigned int **tagArray, int **lruArray){
   }
 }
 
-void loadTrace(char *filename, unsigned int **tagArray, int **lruArray){
-  int trace;
-  FILE *trFile;
-  trFile = fopen(filename,"r");
+//Author Brandon Sprague
+void updateOnMiss(unsigned int address){
+  int set = whichSet(address);
+  int numWays = numberOfWays();
+  int *lruWays = lruArray[set];
   int i = 0;
-  while(!feof(trFile)){
-    fscanf(trFile,"%d",&trace);
-    if(i < 10){
-      printf("%x, %d, %o\n", trace,trace,trace);
+  int leastUsed = -1;
+  int leastUsedIndex = -1;
+  while(i < numWays){
+    if(lruWays[i] == -1){
+      tagArray[set][i] = tagBits(address);
+      return;
+    }
+    if(lruWays[i] > leastUsed){
+      leastUsed = lruWays[i];
+      leastUsedIndex = i;
     }
     i++;
+  }
+  tagArray[set][leastUsedIndex] = tagBits(address);
+}
+
+//Nothing really needs to happen in here except to update the LRU,
+//except we've opted to extract that into a separate method.
+void updateOnHit(unsigned int address){
+
+}
+
+//Author Brandon Sprague
+void loadTrace(char *filename){
+  int address, hitStatus;
+  FILE *trFile;
+  trFile = fopen(filename,"r");
+  while(!feof(trFile)){
+    fscanf(trFile,"%u",&address);
+    hitStatus = hitWay(address);
+    if(hitStatus == -1){ //Miss
+      updateOnMiss(address);
+    }
+    else{ //Hit
+      updateOnHit(address);
+    }
+    //updateLRU
   }
   fclose(trFile);
 }
