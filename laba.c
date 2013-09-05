@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <math.h>
 #include <stdlib.h>
+#include <math.h>
 #define ADDRESS_SIZE 32
 
 int C = 2048;     //Total cache size (in bytes)
@@ -20,9 +20,11 @@ int hitWay(unsigned int, unsigned int**);
 unsigned int indexBits(unsigned int);
 int pow2(int);
 void initializeCache(unsigned int**, int**);
+void loadTrace(char*, unsigned int**, int**);
 
 int main(){
   initializeCache(tagArray, lruArray);
+  loadTrace("trace1.txt",tagArray,lruArray);
   return 0;
 };
 
@@ -81,15 +83,15 @@ unsigned int indexBits(unsigned int address){
 }
 
 int hitWay(unsigned int address, unsigned int **tagArray){
-  int line = whichSet(address);
+  int set = whichSet(address);
   int numWays = numberOfWays(L,K,C);
   int offset = offsetLength(L);
   int length = setIndexLength(K);
-  unsigned int *sets = tagArray[line];
+  unsigned int *ways = tagArray[set];
   unsigned int tag = tagBits(address);
   int i = 0;
   while(i < numWays){
-    if(sets[i] == tag){
+    if(ways[i] == tag){
       return i;
     }
     i++;
@@ -125,4 +127,19 @@ void initializeCache(unsigned int **tagArray, int **lruArray){
       lruArray[i][j] = -1;
     }
   }
+}
+
+void loadTrace(char *filename, unsigned int **tagArray, int **lruArray){
+  int trace;
+  FILE *trFile;
+  trFile = fopen(filename,"r");
+  int i = 0;
+  while(!feof(trFile)){
+    fscanf(trFile,"%d",&trace);
+    if(i < 10){
+      printf("%x, %d, %o\n", trace,trace,trace);
+    }
+    i++;
+  }
+  fclose(trFile);
 }
