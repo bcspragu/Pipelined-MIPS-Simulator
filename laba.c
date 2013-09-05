@@ -10,51 +10,34 @@ int L = 8;        //Line length (in bytes)
 unsigned int **tagArray;
 int **lruArray;
 
+int numberOfWays();
+int setIndexLength();
+int whichSet(unsigned int);
+int offsetLength();
+int tagLength();
+unsigned int tagBits(unsigned int);
+int hitWay(unsigned int, unsigned int**);
+unsigned int indexBits(unsigned int);
+int pow2(int);
+void initializeCache(unsigned int**, int**);
+
 int main(){
-  tagArray = (unsigned int**)malloc(K*numberOfSets(L,K,C)*sizeof(unsigned int));
-  //lruArray = (int**)malloc(K*numberOfSets(L,K,C)*sizeof(int));
-  int Sets = numberOfSets(L,K,C);
-  printf("There are %d sets\n", Sets);
-  int Length = setIndexLength(K);
-  printf("There are %d index bits\n", Length);
-  int Offset = offsetLength(L);
-  printf("There are %d offset bits\n", Offset);
-  int Tag = numTagBits(Length, Offset);
-  printf("There are %d Tag Bits\n", Tag);
-  //Binary 11001010100110100101101001111010
-  unsigned int Address = 3399113338;
-  //Should return the left Tag Bits, aka 1100101010011010010110, which is 3319446
-  printf("The address is %u, the left %d bits of this are %d\n", Address, Tag, tagBits(Address,Length,Offset));
-  /*int i = 0;*/
-  /*for(i = 0; i < 200; i++){*/
-    /*int testAddress = i;*/
-    /*int setNumber = whichLine(testAddress, K);*/
-    /*printf("The address %d goes into line %d\n", testAddress, setNumber);*/
-  /*}*/
-  int lines = K;
-  int sets = numberOfSets(L,K,C);
   initializeCache(tagArray, lruArray);
-  /*int i,j;
-  for(i = 0; i < lines; i++){
-    for(j = 0; j < sets; j++){
-      //printf("The tag is %d and the lru is %d\n",tagArray[i][j],lruArray[i][j]);//this is causing the segfault
-    }
-  }*/
   return 0;
 };
 
 //Author Zach Boynton
 //Tested by Brandon Sprague
-int numberOfSets(int L, int K, int C){
+int numberOfWays(){
   return(C/(K*L));
 };
 
 //Author Zach Boynton
 //Tested by Brandon Sprague
-int setIndexLength(int K){
+int setIndexLength(){
   int t = K;
   int l = 0;
-  while(t>1){
+  while(t > 1){
     t = (t/2);
     l++;
   };
@@ -62,13 +45,13 @@ int setIndexLength(int K){
 };
 
 //Author Brandon Sprague
-int whichLine(unsigned int address, int K){
-  return address % K;
+int whichSet(unsigned int address){
+  return indexBits(address) % K;
 }
 
 //Author Zach Boynton
 //Tested by Brandon Sprague
-int offsetLength(int L){
+int offsetLength(){
   int t = L;
   int l = 0;
   while(t > 1){
@@ -80,24 +63,32 @@ int offsetLength(int L){
 
 //Author Zach Boynton
 //Tested by Brandon Sprague
-int numTagBits(int i, int o){
-  return (ADDRESS_SIZE-(i+o));
+int tagLength(){
+  return (ADDRESS_SIZE-(offsetLength()+setIndexLength()));
 };
 
-int tagBits(unsigned int address, int length, int offset){
-  int numBits = numTagBits(length,offset);
-  return address >> ADDRESS_SIZE - numBits;
+unsigned int tagBits(unsigned int address){
+  int tagSize = tagLength();
+  return address >> (ADDRESS_SIZE - tagSize);
+}
+
+unsigned int indexBits(unsigned int address){
+  unsigned int index = address >> offsetLength();
+  //Will evaluate to a binary number with setIndexLength() 1s
+  unsigned int mask = pow2(setIndexLength()) - 1;
+  //Mask it with the address, which now has the index bits in the right most positions
+  return address & mask;
 }
 
 int hitWay(unsigned int address, unsigned int **tagArray){
-  int line = whichLine(address, K);
-  int numSets = numberOfSets(L,K,C);
+  int line = whichSet(address);
+  int numWays = numberOfWays(L,K,C);
   int offset = offsetLength(L);
   int length = setIndexLength(K);
   unsigned int *sets = tagArray[line];
-  unsigned int tag = tagBits(address, length, offset);
+  unsigned int tag = tagBits(address);
   int i = 0;
-  while(i < numSets){
+  while(i < numWays){
     if(sets[i] == tag){
       return i;
     }
@@ -106,55 +97,32 @@ int hitWay(unsigned int address, unsigned int **tagArray){
   return -1;
 }
 
-void initializeCache(unsigned int **tagArray, int **lruArray){
-  int lines = K;
-  int sets = numberOfSets(L,K,C);
-  int i,j;
-  printf("the inticache is called\n"); //breaking past here
-  //Initialize lru to lruArray[lines][sets]
-  lruArray = (int**)malloc(lines*sizeof(int*));
-  for(i = 0; i < lines; i++){
-    lruArray[i] = (int*)malloc(sets*sizeof(int));
+//Returns 2^exponent for integer exponent >= 0
+int pow2(int exponent){
+  int base = 1;
+  while(exponent > 0){
+    base = base*2;
+    exponent--;
   }
-  //Initialize tag to tagArray[lines][sets]
-  tagArray = (unsigned int**)malloc(lines*sizeof(int*));
-  for(i = 0; i < lines; i++){
-    tagArray[i] = (int*)malloc(sets*sizeof(int));
-  }
+  return base;
+}
 
-  for(i = 0; i < lines; i++){
-    for(j = 0; j < sets; j++){
+void initializeCache(unsigned int **tagArray, int **lruArray){
+  int sets = K;
+  int ways = numberOfWays();
+  int i,j;
+  //Initialize lru to lruArray[lines][sets]
+  lruArray = (int**)malloc(sets*sizeof(int*));
+  tagArray = (unsigned int**)malloc(sets*sizeof(int*));
+  for(i = 0; i < sets; i++){
+    lruArray[i] = (int*)malloc(ways*sizeof(int));
+    tagArray[i] = (unsigned int*)malloc(ways*sizeof(int));
+  }
+  for(i = 0; i < sets; i++){
+    for(j = 0; j < ways; j++){
       //Tag is 0 and lru is -1 so we don't have false matches
       tagArray[i][j] = 0;
       lruArray[i][j] = -1;
     }
   }
-
-  //Print out arrays
-  for(i = 0; i < sets; i++){
-    printf("Set %d\t", i);
-  }
-  printf("\n");
-  for(i = 0; i < lines; i++){
-    for(j = 0; j < sets; j++){
-      printf("%u\t",tagArray[i][j]);
-    }
-    printf("\n");
-  }
-  for(i = 0; i < sets; i++){
-    printf("Set %d\t", i);
-  }
-  printf("\n");
-  for(i = 0; i < lines; i++){
-    for(j = 0; j < sets; j++){
-      printf("%d\t",lruArray[i][j]);
-    }
-    printf("\n");
-  }
-};
-
-
-/*void updateOnHit(unsigned int address){
-  
-  };*/
-
+}
