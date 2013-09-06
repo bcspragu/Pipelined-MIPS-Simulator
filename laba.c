@@ -6,8 +6,8 @@
 
 int C = 2048;     //Total cache size (in bytes)
 int K,L;
-int arrK[] = {128,64,32,16,8};      //Number of lines per set
-int arrL[] = {8,16,32,64,128};        //Line length (in bytes)
+int arrK[] = {256,128,64,32,16,8,4,2};      //Number of lines per set
+int arrL[] = {2,4,8,16,32,64,128,256};        //Line length (in bytes)
 
 int miss, hit = 0;
 float missRate;
@@ -34,7 +34,7 @@ void updateLRU(int way, int set);
 int main(){
   //  assert(whichSet(128)==16);
   int i;
-  for(i = 0; i < 5; i++){
+  for(i = 0; i < 8; i++){
     K = arrK[i];
     L = arrL[i];
     initializeCache(tagArray, lruArray);
