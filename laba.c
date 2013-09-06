@@ -7,7 +7,7 @@
 int C = 2048;     //Total cache size (in bytes)
 int K = 128;      //Number of lines per set
 int L = 8;        //Line length (in bytes)
-int miss, hit=0;
+int miss, hit = 0;
 
 unsigned int **tagArray;
 int **lruArray;
@@ -161,15 +161,15 @@ void updateOnMiss(unsigned int address){
     i++;
   }
   tagArray[set][leastUsedIndex] = tagBits(address);
-  miss++;
   updateLRU(leastUsedIndex,set);
+  miss++;
 }
 
 //Nothing really needs to happen in here except to update the LRU,
 //except we've opted to extract that into a separate method.
 void updateOnHit(unsigned int address){
-  hit++;
   updateLRU(hitWay(address),whichSet(address));
+  hit++;
 }
 
 //Author Brandon Sprague
@@ -180,28 +180,24 @@ void loadTrace(char *filename){
   trFile = fopen(filename,"r");
   while(!feof(trFile)){
     fscanf(trFile,"%u",&address);
-    //printf("Address is %u\n", address);
     hitStatus = hitWay(address);
     if(hitStatus == -1){ //Miss
-      //printf("Ya missed son\n");
       updateOnMiss(address);
     }
     else{ //Hit
-      //printf("Hit right in the panus\n");
       updateOnHit(address);
     }
-    //    updateLRU(hitStatus, whichSet(address));
   }
   fclose(trFile);
 }
 
 
 void updateLRU(int way, int set){
-  int tmp=lruArray[set][way];
-  lruArray[set][way]=0;
+  int tmp = lruArray[set][way];
+  lruArray[set][way] = 0;
   int i;
-  for(i=0; i<way; i++){
-    if(lruArray[set][i]<tmp){
+  for(i = 0; i < way; i++){
+    if(lruArray[set][i] < tmp){
       lruArray[set][i]++;
     }
   }
