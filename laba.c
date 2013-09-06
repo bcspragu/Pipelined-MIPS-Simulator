@@ -7,7 +7,10 @@
 int C = 2048;     //Total cache size (in bytes)
 int K = 128;      //Number of lines per set
 int L = 8;        //Line length (in bytes)
-int miss, hit = 0;
+
+int miss, hit=0;
+float missRate;
+
 
 unsigned int **tagArray;
 int **lruArray;
@@ -31,7 +34,8 @@ int main(){
   //  assert(whichSet(128)==16);
   initializeCache(tagArray, lruArray);
   loadTrace("trace1.txt");
-  printf("There are %d hits and %d misses\n", hit, miss);
+  missRate=((float)miss/(miss+hit));
+  printf("miss rate is %f\n", missRate);
   return 0;
 };
 
