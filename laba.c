@@ -8,7 +8,7 @@ int C = 2048;     //Total cache size (in bytes)
 int K = 128;      //Number of lines per set
 int L = 8;        //Line length (in bytes)
 
-int miss, hit=0;
+int miss, hit = 0;
 float missRate;
 
 
@@ -107,7 +107,6 @@ int hitWay(unsigned int address){
     if(ways[i] == tag && lruWays[i] != -1){
       return i;
     }
-    i++;
   }
   return -1;
 }
@@ -195,14 +194,13 @@ void loadTrace(char *filename){
   fclose(trFile);
 }
 
-
 void updateLRU(int way, int set){
   int tmp = lruArray[set][way];
-  lruArray[set][way] = 0;
   int i;
   for(i = 0; i < way; i++){
     if(lruArray[set][i] < tmp){
       lruArray[set][i]++;
     }
   }
+  lruArray[set][way] = 0;
 }
