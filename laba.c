@@ -5,8 +5,9 @@
 #define ADDRESS_SIZE 32
 
 int C = 2048;     //Total cache size (in bytes)
-int K = 128;      //Number of lines per set
-int L = 8;        //Line length (in bytes)
+int K,L;
+int arrK[] = {128,64,32,16,8};      //Number of lines per set
+int arrL[] = {8,16,32,64,128};        //Line length (in bytes)
 
 int miss, hit = 0;
 float missRate;
@@ -32,10 +33,17 @@ void updateLRU(int way, int set);
 
 int main(){
   //  assert(whichSet(128)==16);
-  initializeCache(tagArray, lruArray);
-  loadTrace("trace1.txt");
-  missRate=((float)miss/(miss+hit));
-  printf("miss rate is %f\n", missRate);
+  int i;
+  for(i = 0; i < 5; i++){
+    K = arrK[i];
+    L = arrL[i];
+    initializeCache(tagArray, lruArray);
+    loadTrace("trace1.txt");
+    missRate=((float)miss/(miss+hit));
+    printf("miss rate is %f\n", missRate);
+    hit = 0;
+    miss = 0;
+  }
   return 0;
 };
 
