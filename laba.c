@@ -107,6 +107,7 @@ int hitWay(unsigned int address){
     if(ways[i] == tag && lruWays[i] != -1){
       return i;
     }
+    i++;
   }
   return -1;
 }
