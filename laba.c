@@ -4,7 +4,7 @@
 #include <assert.h>
 #define ADDRESS_SIZE 32
 
-int C = 2048;     //Total cache size (in bytes)
+int C = 1024;     //Total cache size (in bytes)
 int K,L;
 int arrK[] = {256,128,64,32,16,8,4,2};      //Number of lines per set
 int arrL[] = {2,4,8,16,32,64,128,256};        //Line length (in bytes)
@@ -32,17 +32,18 @@ void updateOnHit(unsigned int);
 void updateLRU(int way, int set);
 
 int main(){
-  //  assert(whichSet(128)==16);
   int i;
   for(i = 0; i < 8; i++){
     K = arrK[i];
     L = arrL[i];
     initializeCache(tagArray, lruArray);
     loadTrace("trace1.txt");
-    missRate=((float)miss/(miss+hit));
+    missRate = ((float)miss/(miss+hit));
     printf("miss rate is %f\n", missRate);
     hit = 0;
     miss = 0;
+    free(tagArray);
+    free(lruArray);
   }
   return 0;
 };
