@@ -5,9 +5,10 @@
 #define ADDRESS_SIZE 32
 
 int C = 1024;     //Total cache size (in bytes)
-int K,L;
-int arrK[] = {256,128,64,32,16,8,4,2};      //Number of lines per set
-int arrL[] = {2,4,8,16,32,64,128,256};        //Line length (in bytes)
+int K,L; //Number of lines per set, Line length (in bytes)
+//The configurations are designed to keep a consistent way count
+int arrK[] = {256,128,64,32,16,8,4,2}; //Configuration stored in an array
+int arrL[] = {2,4,8,16,32,64,128,256}; //Configuration stored in an array
 
 int miss, hit = 0;
 float missRate;
@@ -16,6 +17,7 @@ float missRate;
 unsigned int **tagArray;
 int **lruArray;
 
+void assertions();
 int numberOfWays(); //tested
 int setIndexLength(); //tested
 int whichSet(unsigned int);//tested
@@ -35,40 +37,6 @@ void updateLRU(int way, int set); //tested
 //Need to re-examine number of ways
 
 int main(){
-  //testing for whichSet
-  /*K=32;
-  assert(whichSet(127)==31);*/
-  //testing for tagBits
-  /*K=64;
-  L=32;
-  assert(tagBits(2147483648)==1048576);*/
-  //K=64;
-  //L=16;
-  /*assert((pow2(setIndexLength())-1)==63);
-  assert(indexBits(512)==32);*/
-  //Testing hitWay
-  //initializeCache();
-  //loadTrace("trace1.txt");
-  //printf("tag:%d lru:%d\t", tagArray[32][0],lruArray[32][0]);
-  //cacheAccess(1545);
-  // printf("tag:%d lru:%d\n", tagArray[32][0],lruArray[32][0]);
-  //cacheAccess(3593);
-  //cacheAccess(1545);
-  //printf("tag:%d lru:%d\ttag:%d lru:%d\tMisses:%d\tHits:%d\n",tagArray[32][0],lruArray[32][0], tagArray[32][1],lruArray[32][1], miss,hit);
-  //tagArray[32][1]=1;
-  //lruArray[32][1]=0;
-  
-  /*printf("Set:%d\tTag:%d\tWays:%d\tHit in %d Way\n",whichSet(1545), tagBits(1545),numberOfWays(), hitWay(1545));
-  assert(hitWay(1545)==1);*/
-  //Testing initialization
-  /* initializeCache(tagArray, lruArray);
-  int j,k=0;
-  for(j=0; j<K; j++){
-    for(k=0; k<numberOfWays(); k++){
-      printf("%d %d\t", tagArray[j][k],lruArray[j][k]);
-    }
-    printf("\n");
-    }*/
   int i;
   for(i = 0; i < 8; i++){
     K = arrK[i];
@@ -81,7 +49,7 @@ int main(){
     miss = 0;
     free(tagArray);
     free(lruArray);
-    }
+  }
   return 0;
 };
 
@@ -274,4 +242,41 @@ void updateLRU(int way, int set){
     }
   }
   lruArray[set][way] = 0;
+}
+
+void assertions(){
+  //testing for whichSet
+  /*K=32;
+  assert(whichSet(127)==31);*/
+  //testing for tagBits
+  /*K=64;
+  L=32;
+  assert(tagBits(2147483648)==1048576);*/
+  //K=64;
+  //L=16;
+  /*assert((pow2(setIndexLength())-1)==63);
+  assert(indexBits(512)==32);*/
+  //Testing hitWay
+  //initializeCache();
+  //loadTrace("trace1.txt");
+  //printf("tag:%d lru:%d\t", tagArray[32][0],lruArray[32][0]);
+  //cacheAccess(1545);
+  // printf("tag:%d lru:%d\n", tagArray[32][0],lruArray[32][0]);
+  //cacheAccess(3593);
+  //cacheAccess(1545);
+  //printf("tag:%d lru:%d\ttag:%d lru:%d\tMisses:%d\tHits:%d\n",tagArray[32][0],lruArray[32][0], tagArray[32][1],lruArray[32][1], miss,hit);
+  //tagArray[32][1]=1;
+  //lruArray[32][1]=0;
+  
+  /*printf("Set:%d\tTag:%d\tWays:%d\tHit in %d Way\n",whichSet(1545), tagBits(1545),numberOfWays(), hitWay(1545));
+  assert(hitWay(1545)==1);*/
+  //Testing initialization
+  /* initializeCache(tagArray, lruArray);
+  int j,k=0;
+  for(j=0; j<K; j++){
+    for(k=0; k<numberOfWays(); k++){
+      printf("%d %d\t", tagArray[j][k],lruArray[j][k]);
+    }
+    printf("\n");
+    }*/
 }
