@@ -1,14 +1,14 @@
+//Make sure to compile with gcc laba.c -lm
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
 #define ADDRESS_SIZE 32
+#define NUMBER_OF_WAYS 2
 
-int C = 1024;     //Total cache size (in bytes)
-int K,L; //Number of lines per set, Line length (in bytes)
-//The configurations are designed to keep a consistent way count
-int arrK[] = {256,128,64,32,16,8,4,2}; //Configuration stored in an array
-int arrL[] = {2,4,8,16,32,64,128,256}; //Configuration stored in an array
+int C;      //Total cache size (in bytes)
+int K;      //Number of lines per set
+int L = 8;  //Line length (in bytes)
 
 int miss, hit = 0;
 float missRate;
@@ -37,18 +37,25 @@ void updateLRU(int way, int set); //tested
 //Need to re-examine number of ways
 
 int main(){
-  int i;
-  for(i = 0; i < 8; i++){
-    K = arrK[i];
-    L = arrL[i];
-    initializeCache(tagArray, lruArray);
-    loadTrace("trace1.txt");
-    missRate = ((float)miss/(miss+hit));
-    printf("miss rate is %f\n", missRate);
-    hit = 0;
-    miss = 0;
-    free(tagArray);
-    free(lruArray);
+  int i,j;
+  char *traceName;
+  for(j = 1; j < 6; j++){
+    sprintf(traceName, "trace%d.txt", j); //Generate the name of the trace file to load
+    printf("%s\n",traceName);
+    for(i = 7; i < 21; i++){ //We want to go from 2^7 to 2^20
+      assert(pow2(i) == pow(2,i)); //Quick check to make sure our pow2 is giving good results
+      C = pow2(i);
+      K = C/(L*NUMBER_OF_WAYS); //We want to keep associativity and line length fixed as cache size increases, so we vary the number of lines
+      initializeCache(tagArray, lruArray);
+      loadTrace(traceName);
+      assertions();
+      missRate = ((float)miss/(miss+hit));
+      printf("%f\n", missRate);
+      hit = 0;
+      miss = 0;
+      free(tagArray);
+      free(lruArray);
+    }
   }
   return 0;
 };
@@ -245,31 +252,14 @@ void updateLRU(int way, int set){
 }
 
 void assertions(){
-  //testing for whichSet
-  /*K=32;
-  assert(whichSet(127)==31);*/
-  //testing for tagBits
-  /*K=64;
-  L=32;
-  assert(tagBits(2147483648)==1048576);*/
-  //K=64;
-  //L=16;
-  /*assert((pow2(setIndexLength())-1)==63);
-  assert(indexBits(512)==32);*/
-  //Testing hitWay
-  //initializeCache();
-  //loadTrace("trace1.txt");
-  //printf("tag:%d lru:%d\t", tagArray[32][0],lruArray[32][0]);
-  //cacheAccess(1545);
-  // printf("tag:%d lru:%d\n", tagArray[32][0],lruArray[32][0]);
-  //cacheAccess(3593);
-  //cacheAccess(1545);
-  //printf("tag:%d lru:%d\ttag:%d lru:%d\tMisses:%d\tHits:%d\n",tagArray[32][0],lruArray[32][0], tagArray[32][1],lruArray[32][1], miss,hit);
-  //tagArray[32][1]=1;
-  //lruArray[32][1]=0;
-  
-  /*printf("Set:%d\tTag:%d\tWays:%d\tHit in %d Way\n",whichSet(1545), tagBits(1545),numberOfWays(), hitWay(1545));
-  assert(hitWay(1545)==1);*/
+  assert((offsetLength()+setIndexLength()+tagLength()) == ADDRESS_SIZE);
+  unsigned int address = 35387358;
+  assert((address >> ADDRESS_SIZE-tagLength()) ==  tagBits(address));
+  assert(pow2(0) == 1);
+  assert(pow2(1) == 2);
+  assert(pow2(2) == 4);
+  assert(pow2(3) == 8);
+  assert(pow2(4) == 16);
   //Testing initialization
   /* initializeCache(tagArray, lruArray);
   int j,k=0;
