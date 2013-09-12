@@ -4,11 +4,10 @@
 #include <math.h>
 #include <assert.h>
 #define ADDRESS_SIZE 32
-#define NUMBER_OF_WAYS 2
 
 int C;      //Total cache size (in bytes)
-int K;      //Number of lines per set
-int L = 8;  //Line length (in bytes)
+int K = 2;      //Number of lines per set, also known as ways
+int L = 16;  //Line length (in bytes)
 
 int miss, hit = 0;
 float missRate;
@@ -17,8 +16,7 @@ float missRate;
 unsigned int **tagArray;
 int **lruArray;
 
-void assertions();
-int numberOfWays(); //tested
+int numberOfSets(); //tested
 int setIndexLength(); //tested
 int whichSet(unsigned int);//tested
 int offsetLength(); //tested
@@ -38,16 +36,34 @@ void updateLRU(int way, int set); //tested
 int main(){
   int i,j;
   char *traceName;
-  for(j = 1; j < 6; j++){
-    sprintf(traceName, "trace%d.txt", j); //Generate the name of the trace file to load
+  //Graph 1
+  for(i = 1; i < 7; i++){
+    sprintf(traceName, "trace%d.txt", i); //Generate the name of the trace file to load
     printf("%s\n",traceName);
-    for(i = 7; i < 21; i++){ //We want to go from 2^7 to 2^20
-      assert(pow2(i) == pow(2,i)); //Quick check to make sure our pow2 is giving good results
-      C = pow2(i);
-      K = C/(L*NUMBER_OF_WAYS); //We want to keep associativity and line length fixed as cache size increases, so we vary the number of lines
+    for(j = 7; j < 21; j++){ //We want to go from 2^7 to 2^20
+      assert(pow2(j) == pow(2,j)); //Quick check to make sure our pow2 is giving good results
+      C = pow2(j);
       initializeCache(tagArray, lruArray);
       loadTrace(traceName);
-      assertions();
+      missRate = ((float)miss/(miss+hit));
+      printf("%f\n", missRate);
+      hit = 0;
+      miss = 0;
+      free(tagArray);
+      free(lruArray);
+    }
+  }
+  C = 32768;
+  L = 32;
+  //Graph 2
+  for(i = 1; i < 7; i++){
+    sprintf(traceName, "trace%d.txt", i); //Generate the name of the trace file to load
+    printf("%s\n",traceName);
+    for(j = 0; j < 7; j++){ //We want to go from 2^7 to 2^20
+      assert(pow2(j) == pow(2,j)); //Quick check to make sure our pow2 is giving good results
+      K = pow2(j);
+      initializeCache(tagArray, lruArray);
+      loadTrace(traceName);
       missRate = ((float)miss/(miss+hit));
       printf("%f\n", missRate);
       hit = 0;
@@ -61,20 +77,20 @@ int main(){
 
 //Author Zach Boynton
 //Tested by Brandon Sprague
-int numberOfWays(){
+int numberOfSets(){
   return(C/(K*L));
 };
 
 //Author Zach Boynton
 //Tested by Brandon Sprague
 int setIndexLength(){
-  return intLog2(K);
+  return intLog2(numberOfSets());
 };
 
 //Author Brandon Sprague
 //Tested by Zach Boynton
 int whichSet(unsigned int address){
-  return indexBits(address) % K;
+  return indexBits(address) % numberOfSets();
 }
 
 //Author Zach Boynton
@@ -119,12 +135,11 @@ unsigned int indexBits(unsigned int address){
 //Tested By Zach Boynton
 int hitWay(unsigned int address){
   int set = whichSet(address);
-  int numWays = numberOfWays();
   unsigned int *ways = tagArray[set];
   int *lruWays = lruArray[set];
   unsigned int tag = tagBits(address);
   int i = 0;
-  while(i < numWays){
+  while(i < K){
     if(ways[i] == tag && lruWays[i] != -1){
       return i;
     }
@@ -148,18 +163,17 @@ int pow2(int exponent){
 //Author Zach Boynton && Brandon Sprague
 //Tested By Zach Boynton
 void initializeCache(){
-  int sets = K;
-  int ways = numberOfWays();
+  int sets = numberOfSets();
   int i,j;
   //Initialize lru to lruArray[lines][sets]
   lruArray = (int**)malloc(sets*sizeof(int*));
   tagArray = (unsigned int**)malloc(sets*sizeof(int*));
   for(i = 0; i < sets; i++){
-    lruArray[i] = (int*)malloc(ways*sizeof(int));
-    tagArray[i] = (unsigned int*)malloc(ways*sizeof(int));
+    lruArray[i] = (int*)malloc(K*sizeof(int));
+    tagArray[i] = (unsigned int*)malloc(K*sizeof(int));
   }
   for(i = 0; i < sets; i++){
-    for(j = 0; j < ways; j++){
+    for(j = 0; j < K; j++){
       //Tag is 0 and lru is -1 so we don't have false matches
       tagArray[i][j] = 0;
       lruArray[i][j] = -1;
@@ -171,12 +185,11 @@ void initializeCache(){
 //Tested By Zach Boynton
 void updateOnMiss(unsigned int address){
   int set = whichSet(address);
-  int numWays = numberOfWays();
   int *lruWays = lruArray[set];
   int i = 0;
   int leastUsed = -1;
   int leastUsedIndex = -1;
-  while(i < numWays){
+  while(i < K){
     if(lruWays[i] == -1){
       tagArray[set][i] = tagBits(address);
       updateLRU(i, set);
@@ -208,12 +221,12 @@ void updateOnHit(unsigned int address){
 void cacheAccess(unsigned int address){
   int hitStatus;
   hitStatus = hitWay(address);
-    if(hitStatus == -1){ //Miss
-      updateOnMiss(address);
-    }
-    else{ //Hit
-      updateOnHit(address);
-    }
+  if(hitStatus == -1){ //Miss
+    updateOnMiss(address);
+  }
+  else{ //Hit
+    updateOnHit(address);
+  }
 }
 
 //Author Brandon Sprague
@@ -234,35 +247,14 @@ void loadTrace(char *filename){
 //Tested by Brandon Sprague && Zach Boynton
 void updateLRU(int way, int set){
   int tmp = lruArray[set][way];
-  int nw=numberOfWays();
   int i;
-  for(i = 0; i < nw; i++){
-   if(lruArray[set][i] < tmp){
-	lruArray[set][i]++;
+  for(i = 0; i < K; i++){
+    if(lruArray[set][i] < tmp){
+      lruArray[set][i]++;
     }
-   else if(tmp==-1 && lruArray[set][i] > tmp){
+    else if(tmp==-1 && lruArray[set][i] > tmp){
       lruArray[set][i]++;
     }
   }
   lruArray[set][way] = 0;
-}
-
-void assertions(){
-  assert((offsetLength()+setIndexLength()+tagLength()) == ADDRESS_SIZE);
-  unsigned int address = 35387358;
-  assert((address >> ADDRESS_SIZE-tagLength()) ==  tagBits(address));
-  assert(pow2(0) == 1);
-  assert(pow2(1) == 2);
-  assert(pow2(2) == 4);
-  assert(pow2(3) == 8);
-  assert(pow2(4) == 16);
-  //Testing initialization
-  /* initializeCache(tagArray, lruArray);
-  int j,k=0;
-  for(j=0; j<K; j++){
-    for(k=0; k<numberOfWays(); k++){
-      printf("%d %d\t", tagArray[j][k],lruArray[j][k]);
-    }
-    printf("\n");
-    }*/
 }
