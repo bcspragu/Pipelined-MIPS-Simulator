@@ -27,14 +27,13 @@ unsigned int tagBits(unsigned int);//tested
 int hitWay(unsigned int);//tested
 unsigned int indexBits(unsigned int); //tested
 int pow2(int); //tested
+int intLog2(int);
 void initializeCache(); //tested
 void cacheAccess(unsigned int); //tested
 void loadTrace(char*); //tested
 void updateOnMiss(unsigned int); //tested
 void updateOnHit(unsigned int); //tested
 void updateLRU(int way, int set); //tested
-
-//Need to re-examine number of ways
 
 int main(){
   int i,j;
@@ -69,13 +68,7 @@ int numberOfWays(){
 //Author Zach Boynton
 //Tested by Brandon Sprague
 int setIndexLength(){
-  int t = K;
-  int l = 0;
-  while(t > 1){
-    t = (t/2);
-    l++;
-  };
-  return l;
+  return intLog2(K);
 };
 
 //Author Brandon Sprague
@@ -87,14 +80,17 @@ int whichSet(unsigned int address){
 //Author Zach Boynton
 //Tested by Brandon Sprague
 int offsetLength(){
-  int t = L;
-  int l = 0;
-  while(t > 1){
-    t = (t/2);
-    l++;
-  };
-  return l;
+  return intLog2(L);
 };
+
+int intLog2(int number){
+  int log = 0;
+  while(number > 1){
+    number = (number/2);
+    log++;
+  }
+  return log;
+}
 
 //Author Zach Boynton
 //Tested by Brandon Sprague
