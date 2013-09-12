@@ -266,7 +266,7 @@ void updateLRU(int way, int set){
   int nw=numberOfWays();
   int i;
   for(i = 0; i < nw; i++){
-   if(lruArray[set][i] < tmp){
+   if(lruArray[set][i] < tmp && tmp != -1){
 	lruArray[set][i]++;
     }
     if(tmp==-1 && lruArray[set][i] > tmp){
