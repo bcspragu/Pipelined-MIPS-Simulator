@@ -6,8 +6,8 @@
 #define ADDRESS_SIZE 32
 
 int C;      //Total cache size (in bytes)
-int K = 2;  //Number of lines per set, also known as ways
-int L = 16; //Line length (in bytes)
+int K = 2;      //Number of lines per set, also known as ways
+int L = 16;  //Line length (in bytes)
 
 int miss, hit = 0;
 float missRate;
@@ -45,6 +45,8 @@ int main(){
       C = pow2(j);
       initializeCache(tagArray, lruArray);
       loadTrace(traceName);
+      assert(miss>=0);
+      assert(hit>=0);
       missRate = ((float)miss/(miss+hit));
       printf("%f\n", missRate);
       hit = 0;
@@ -56,14 +58,16 @@ int main(){
   C = 32768;
   L = 32;
   //Graph 2
-  for(i = 1; i < 7; i++){
+  for(i = 1; i < 6; i++){
     sprintf(traceName, "trace%d.txt", i); //Generate the name of the trace file to load
     printf("%s\n",traceName);
-    for(j = 0; j < 7; j++){ //We want to go from 2^7 to 2^20
+    for(j = 0; j < 7; j++){ //We want to go from 2^0to 2^6
       assert(pow2(j) == pow(2,j)); //Quick check to make sure our pow2 is giving good results
       K = pow2(j);
       initializeCache(tagArray, lruArray);
       loadTrace(traceName);
+      assert(miss>=0);
+      assert(hit>=0);
       missRate = ((float)miss/(miss+hit));
       printf("%f\n", missRate);
       hit = 0;
@@ -88,7 +92,7 @@ int setIndexLength(){
 };
 
 //Author Brandon Sprague
-//Tested by Zach Boynton
+//Tested by Zach Boynton && Jacquelyn Ingemi
 int whichSet(unsigned int address){
   return indexBits(address) % numberOfSets();
 }
@@ -114,7 +118,7 @@ int tagLength(){
   return (ADDRESS_SIZE-(offsetLength()+setIndexLength()));
 };
 
-//Author Brandon Sprague
+//Author Jacquelyn Ingemi && Brandon Sprague
 //tested by Zach Boynton
 unsigned int tagBits(unsigned int address){
   int tagSize = tagLength();
@@ -131,7 +135,7 @@ unsigned int indexBits(unsigned int address){
   return (shftAddr & mask);
 }
 
-//Author Brandon Sprague
+//Author Jacquelyn Ingemi && Brandon Sprague
 //Tested By Zach Boynton
 int hitWay(unsigned int address){
   int set = whichSet(address);
@@ -149,9 +153,10 @@ int hitWay(unsigned int address){
 }
 
 //Returns 2^exponent for integer exponent >= 0
-//Author Brandon Sprague
+//Author Jacquelyn Ingemi
 //Tested by Zach Boynton
 int pow2(int exponent){
+  assert (exponent >=0);
   int base = 1;
   while(exponent > 0){
     base = base*2;
@@ -182,7 +187,7 @@ void initializeCache(){
 }
 
 //Author Brandon Sprague
-//Tested By Zach Boynton
+//Tested By Jacquelyn Ingemi && Zach Boynton
 void updateOnMiss(unsigned int address){
   int set = whichSet(address);
   int *lruWays = lruArray[set];
@@ -210,7 +215,7 @@ void updateOnMiss(unsigned int address){
 //Nothing really needs to happen in here except to update the LRU,
 //except we've opted to extract that into a separate method.
 //Author Brandon Sprague
-//Tested by Zach Boynton
+//Tested by Jacquelyn Ingemi && Zach Boynton
 void updateOnHit(unsigned int address){
   updateLRU(hitWay(address),whichSet(address));
   hit++;
@@ -232,7 +237,7 @@ void cacheAccess(unsigned int address){
 //Author Brandon Sprague
 //Tested By Zach Boynton
 void loadTrace(char *filename){
-  unsigned int address; 
+  unsigned int address;
   FILE *trFile;
   trFile = fopen(filename,"r");
   while(!feof(trFile)){
