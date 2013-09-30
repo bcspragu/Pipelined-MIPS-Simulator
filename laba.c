@@ -1,3 +1,4 @@
+//Lab A by Brandon Sprague, Zach Boynton, and Jacquelyn Ingemi
 //Make sure to compile with gcc laba.c -lm
 #include <stdio.h>
 #include <stdlib.h>
