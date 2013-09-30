@@ -38,7 +38,7 @@ int main(){
   int i,j;
   char *traceName;
   //Graph 1
-  for(i = 1; i < 7; i++){
+  for(i = 1; i < 6; i++){
     sprintf(traceName, "trace%d.txt", i); //Generate the name of the trace file to load
     printf("%s\n",traceName);
     for(j = 7; j < 21; j++){ //We want to go from 2^7 to 2^20
@@ -59,7 +59,7 @@ int main(){
   C = 32768;
   L = 32;
   //Graph 2
-  for(i = 1; i < 7; i++){
+  for(i = 1; i < 6; i++){
     sprintf(traceName, "trace%d.txt", i); //Generate the name of the trace file to load
     printf("%s\n",traceName);
     for(j = 0; j < 7; j++){ //We want to go from 2^0to 2^6
