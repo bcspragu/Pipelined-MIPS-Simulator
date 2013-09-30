@@ -6,8 +6,8 @@
 #define ADDRESS_SIZE 32
 
 int C;      //Total cache size (in bytes)
-int K = 2;      //Number of lines per set, also known as ways
-int L = 16;  //Line length (in bytes)
+int K = 2;  //Number of lines per set, also known as ways
+int L = 16; //Line length (in bytes)
 
 int miss, hit = 0;
 float missRate;
