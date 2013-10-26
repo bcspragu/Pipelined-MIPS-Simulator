@@ -4,7 +4,7 @@
 
 //Function forward declarations
 void progScanner(char*);
-void parser();
+void parser(char*);
 
 int main(){
   progScanner("prog1.asy");
@@ -15,7 +15,11 @@ void progScanner(char* filename){
   char instruction[100];
   FILE *instFile = fopen(filename,"r");
   while(fgets(instruction,100,instFile)){
-    printf("%s",instruction);
+    parser(instruction);
   }
   fclose(instFile);
+}
+
+void parser(char* instruction){
+
 }
