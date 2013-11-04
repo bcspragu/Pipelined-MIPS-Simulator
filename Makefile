@@ -1,2 +1,2 @@
 all:
-	gcc labc.c -lm -o labc
+	gcc labc.c -lm -o labc && ./labc
