@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -13,6 +14,9 @@ bool isAValidCharacter(char);
 bool isAValidReg(char);
 void extractOpcode(char*, char*);
 int extractRegister(char*,int);
+bool isRType(char* opcode);
+bool isIType(char* opcode);
+int regValue(char*);
 
 int main(){
   progScanner("prog1.asy");
@@ -33,10 +37,17 @@ void parser(char* instruction){
   char opcode[10];
   extractOpcode(opcode,instruction);
   //R Type as fuck
-  if(strcmp(opcode,"add") == 0 || strcmp(opcode,"addi") == 0, strcmp(opcode,"sub"), strcmp(opcode,"mult") == 0){
+  if(isRType(opcode)){
     int rs = extractRegister(instruction,0);
     int rt = extractRegister(instruction,1);
     int rd = extractRegister(instruction,2);
+  }else if(isIType(opcode)){
+    
+  }else if(strcmp(opcode,"haltSimulation") == 0){
+    //Run it through the pipeline and shut shit down
+  }else{
+    //Unrecognized, crash the program
+    assert(!"Unrecognized instruction");
   }
 }
 
@@ -85,7 +96,7 @@ int extractRegister(char* instruction, int index){
   int regIndex = 0;
   int charIndex = 0;
   bool readOpcode = false;
-  char reg[5];
+  char reg[6]; //To be able to hold $zero, which is 5 characters and the null character
   
   for(i = 0; instruction[i] != '\0'; i++){
     if(readOpcode && instruction[i] == ','){
@@ -99,5 +110,105 @@ int extractRegister(char* instruction, int index){
     }
   }
   reg[charIndex++] = '\0';
-  //TODO turn value in reg (ex $0, or $t1, etc)
+  //
+  //Checking if it's a valid register
+  if(reg[0] != '$'){
+    assert(!"Register didn't start with a dollar sign");
+  }
+  //Set regValue the string without the dollar sign
+  int regVal = regValue(reg+1);
+  if(regVal != -1){
+    //Store that register in the struct for that instruction
+    printf("%d\n", regVal);
+  }else{
+    //Register is invalid
+    assert(!"Register is invalid.");
+  }
+  return regVal;
+}
+
+bool isRType(char* opcode){
+  return strcmp(opcode,"add") == 0 || strcmp(opcode,"sub") == 0 || strcmp(opcode,"mult") == 0;
+}
+
+bool isIType(char* opcode){
+  return strcmp(opcode,"addi") == 0 || strcmp(opcode,"lw") == 0 || strcmp(opcode,"sw") == 0 || strcmp(opcode,"beq") == 0;
+}
+
+//Returns the location (0-31) of the register from the name
+int regValue(char* c){
+  //Register indexes via http://msdn.microsoft.com/en-us/library/ms253512(v=vs.80).aspx
+  int regIndex = c[1] - '0';
+  switch(c[0]){
+    case 'a':
+      if(regIndex >= 0 && regIndex <= 3 ){
+        return 4 + regIndex;
+      }else if(c[1] == 't'){
+        return 1;
+      }
+      break;
+    case 'g':
+      if(c[1] == 'p'){
+        return 28;
+      }
+      break;
+    case 'k':
+      if(regIndex >= 0 && regIndex <= 1 ){
+        return 26 + regIndex;
+      }
+      break;
+    case 'r':
+      if(c[1] == 'a'){
+        return 31;
+      }
+      break;
+    case 's':
+      if(regIndex >= 0 && regIndex <= 7 ){
+        return 16 + regIndex;
+      }else if(regIndex == 8){
+        return 30;
+      }else if(c[1] == 'p'){
+        return 29;
+      }
+
+      break;
+    case 't':
+      if(regIndex >= 0 && regIndex <= 7 ){
+        return 8 + regIndex;
+      }else if(regIndex >= 8 && regIndex <= 9 ){
+        return 16 + regIndex;
+      }
+      break;
+    case 'v':
+      if(regIndex >= 0 && regIndex <= 1 ){
+        return 2 + regIndex;
+      }
+      break;
+    case 'z':
+      if(strcmp(c,"zero") == 0){
+        return 0;
+      }
+      break;
+  }
+  /*If it doesn't match any of those values, we have to check if it uses the $# format
+    First we check if all the characters after the dollar sign are numbers
+    If they are, then we convert it to a number and check if its between 0 and 31
+    Otherwise we just fail it (return -1)
+  */
+  int i = 0;
+  char currentChar = c[i];
+  while(currentChar != '\0'){
+    if(!isdigit(currentChar)){
+      return -1;
+    }
+    i++;
+    currentChar = c[++i];
+  }
+
+  //If we've made it here, the string is a number
+  regIndex = atoi(c);
+  if(regIndex >= 0 && regIndex <= 31){
+    return regIndex;
+  }
+  return -1;
 }
