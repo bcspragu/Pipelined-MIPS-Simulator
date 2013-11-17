@@ -20,12 +20,12 @@ typedef struct {
 } instruction;
 
 typedef struct{
-  int valid;
+  bool valid;
   instruction inst;
 } if_id_latch;
 
 typedef struct{
-  int valid;
+  bool valid;
   char* Instruction;
   char* Source_Reg;
   int src_data;
@@ -35,16 +35,13 @@ typedef struct{
 } ex_mem_latch;
 
 typedef struct{
-  int valid;
+  bool valid;
   char* Instruction;
   char* Source_Reg;
   int scr_data;
   char* Dest_Reg;
   int dest_data;
 } mem_wb_latch;  
-
-
-
 
 //Function forward declarations
 void progScanner(char*);
