@@ -156,7 +156,6 @@ void MEM(){
   int j=strcmp(ex_mem_l.Instruction, sw);
   int i=strcmp(ex_mem_l.Instruction, lw);
 
-  printf("%d, %d\n",i, j);
   if(!i|!j){
     if(m_cycles>=C){
       //EX_memory latch is clear to write too valid bit =1;
