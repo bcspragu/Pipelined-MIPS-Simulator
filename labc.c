@@ -21,8 +21,13 @@ typedef struct {
 
 typedef struct{
   int valid;
-  char Instruction[20];
-  char Source_Reg[15];
+  instruction inst;
+} if_id_latch;
+
+typedef struct{
+  int valid;
+  char* Instruction;
+  char* Source_Reg;
   int src_data;
   char Dest_Reg[15];
   int dest_data;
@@ -36,7 +41,7 @@ typedef struct{
   int scr_data;
   char Dest_Reg[20];
   int dest_data;
-}mem_wb_latch;  
+} mem_wb_latch;  
 
 
 
@@ -58,7 +63,8 @@ instruction instructions[512];
 int program_counter = 0;
 
 int main(){
-  progScanner("prog2.asy");
+  progScanner("prog1.asy");
+
   return 0;
 }
 
@@ -69,6 +75,8 @@ void progScanner(char* filename){
     parser(instruction_string);
   }
   fclose(instFile);
+  //Once we've read everything in
+  program_counter = 0;
 }
 
 void parser(char* inst){
@@ -86,13 +94,15 @@ void parser(char* inst){
     int rs = extractRegister(inst,0);
     int rt = extractRegister(inst,1);
     int imm = extractImmediate(inst);
-    instruction instantiated_instruction = {R,rs,rt,-1,imm,false};
+    instruction instantiated_instruction = {I,rs,rt,-1,imm,false};
     instructions[program_counter] = instantiated_instruction;
   }else if(strcmp(opcode,"haltSimulation") == 0){
     //Run it through the pipeline and shut shit down
+    //It doesn't matter which type of instruction it is, isHalt is true
+    instruction instantiated_instruction = {R,-1,-1,-1,-1,true};
+    instructions[program_counter] = instantiated_instruction;
   }else{
-    //Unrecognized, crash the program
-    /*assert(!"Unrecognized instruction");*/
+    assert(!"Unrecognized instruction");
   }
   program_counter++;
 }
@@ -163,11 +173,12 @@ int extractRegister(char* instruction, int index){
   }
   //Set regValue to  the string without the dollar sign
   int regVal = regValue(reg+1);
-  
+  printf("%d\n",regVal);
   //Register is invalid
   if(regVal == -1){
-    //Presently commented out because of compilation issues
-    /*assert(!"Register is invalid.");*/
+    printf("%s\n",reg+1);
+    printf("%s\n",reg);
+    assert(!"Register is invalid.");
   }
   return regVal;
 }
@@ -195,7 +206,7 @@ int extractImmediate(char* instruction){
 }
 
 bool isRType(char* opcode){
-  return strcmp(opcode,"add") == 0 || strcmp(opcode,"sub") == 0 || strcmp(opcode,"mult") == 0;
+  return strcmp(opcode,"add") == 0 || strcmp(opcode,"sub") == 0 || strcmp(opcode,"mul") == 0;
 }
 
 bool isIType(char* opcode){
@@ -203,80 +214,84 @@ bool isIType(char* opcode){
 }
 
 //Returns the location (0-31) of the register from the name
+//Note: This takes in a register without the dollar sign, ex. s3, v0, 20, 5, zero
 int regValue(char* c){
   //Register indexes via http://msdn.microsoft.com/en-us/library/ms253512(v=vs.80).aspx
-  int regIndex = c[1] - '0';
-  switch(c[0]){
-    case 'a':
-      if(regIndex >= 0 && regIndex <= 3 ){
-        return 4 + regIndex;
-      }else if(c[1] == 't'){
-        return 1;
-      }
-      break;
-    case 'g':
-      if(c[1] == 'p'){
-        return 28;
-      }
-      break;
-    case 'k':
-      if(regIndex >= 0 && regIndex <= 1 ){
-        return 26 + regIndex;
-      }
-      break;
-    case 'r':
-      if(c[1] == 'a'){
-        return 31;
-      }
-      break;
-    case 's':
-      if(regIndex >= 0 && regIndex <= 7 ){
-        return 16 + regIndex;
-      }else if(regIndex == 8){
-        return 30;
-      }else if(c[1] == 'p'){
-        return 29;
-      }
-
-      break;
-    case 't':
-      if(regIndex >= 0 && regIndex <= 7 ){
-        return 8 + regIndex;
-      }else if(regIndex >= 8 && regIndex <= 9 ){
-        return 16 + regIndex;
-      }
-      break;
-    case 'v':
-      if(regIndex >= 0 && regIndex <= 1 ){
-        return 2 + regIndex;
-      }
-      break;
-    case 'z':
-      if(strcmp(c,"zero") == 0){
-        return 0;
-      }
-      break;
-  }
-  /*If it doesn't match any of those values, we have to check if it uses the $# format
-    First we check if all the characters after the dollar sign are numbers
-    If they are, then we convert it to a number and check if its between 0 and 31
-    Otherwise we just fail it (return -1)
-  */
-  int i = 0;
-  char currentChar = c[i];
-  while(currentChar != '\0'){
-    if(!isdigit(currentChar)){
-      return -1;
+  if(isalpha(c[0])){
+    int regIndex = c[1] - '0';
+    switch(c[0]){
+      case 'a':
+        if(regIndex >= 0 && regIndex <= 3 ){
+          return 4 + regIndex;
+        }else if(c[1] == 't'){
+          return 1;
+        }
+        break;
+      case 'g':
+        if(c[1] == 'p'){
+          return 28;
+        }
+        break;
+      case 'k':
+        if(regIndex >= 0 && regIndex <= 1 ){
+          return 26 + regIndex;
+        }
+        break;
+      case 'r':
+        if(c[1] == 'a'){
+          return 31;
+        }
+        break;
+      case 's':
+        if(regIndex >= 0 && regIndex <= 7 ){
+          return 16 + regIndex;
+        }else if(regIndex == 8){
+          return 30;
+        }else if(c[1] == 'p'){
+          return 29;
+        }
+        break;
+      case 't':
+        if(regIndex >= 0 && regIndex <= 7 ){
+          return 8 + regIndex;
+        }else if(regIndex >= 8 && regIndex <= 9 ){
+          return 16 + regIndex;
+        }
+        break;
+      case 'v':
+        if(regIndex >= 0 && regIndex <= 1 ){
+          return 2 + regIndex;
+        }
+        break;
+      case 'z':
+        if(strcmp(c,"zero") == 0){
+          return 0;
+        }
+        break;
     }
-    i++;
-    currentChar = c[++i];
+  }else{
+    /*If it doesn't have a letter in it's first position, we have to check if it uses the $# format
+      First we check if all the characters after the dollar sign are numbers
+      If they are, then we convert it to a number and check if its between 0 and 31
+      Otherwise we just fail it (return -1)
+    */
+    int i = 0;
+    char currentChar = c[i];
+    while(currentChar != '\0'){
+      if(!isdigit(currentChar)){
+        return -1;
+      }
+      currentChar = c[++i];
+    }
+    //If we've made it here, the string is a number
+    int regIndex = atoi(c);
+    if(regIndex >= 0 && regIndex <= 31){
+      return regIndex;
+    }else{
+      assert(!"Register number out of bounds");
+    }
   }
 
-  //If we've made it here, the string is a number
-  regIndex = atoi(c);
-  if(regIndex >= 0 && regIndex <= 31){
-    return regIndex;
-  }
   return -1;
 }
 
