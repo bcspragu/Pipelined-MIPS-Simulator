@@ -36,7 +36,7 @@ typedef struct{
   int scr_data;
   char* Dest_Reg;
   int dest_data;
-}mem_wb_l;  
+}mem_wb_latch;  
 
 
 
@@ -283,7 +283,7 @@ int regValue(char* c){
 //Begin Zach being a tard
 
 
-void MEM(latch *memory, mem_wb_l *wbl){
+void MEM(latch *memory, mem_wb_latch *wbl){
   static int m_cycles=0;
   char lw[2];
   strcpy(lw, "lw");
