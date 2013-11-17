@@ -317,40 +317,40 @@ void MEM(void){
   char sw[2];
   strcpy(sw,"sw");
 
-  int j=strcmp((*ex_mem_l).Instruction, sw);
-  int i=strcmp((*ex_mem_l).Instruction, lw);
+  int j=strcmp(ex_mem_l.Instruction, sw);
+  int i=strcmp(ex_mem_l.Instruction, lw);
 
   printf("%d, %d\n",i, j);
   if(!i|!j){
     if(m_cycles>=C){
       //EX_memory latch is clear to write too valid bit =1;
       m_cycles=0;// reset when reached
-      ex_mem_l->valid=1;
+      ex_mem_l.valid=1;
       printf("memoryory access Complete\n");
     }
     else{
       //EX_memory latch should not be written to. Still doing a memory access
       // so valid bit =0
-      ex_mem_l->valid=0;
+      ex_mem_l.valid=0;
       //Also add cycle cnter?
       m_cycles++;
       printf("Accessing memory...\n");
     }
-    printf("%c%c\n", *((*ex_mem_l).Instruction), *((*ex_mem_l).Instruction+1));
+    printf("%c%c\n", *(ex_mem_l.Instruction), *(ex_mem_l.Instruction+1));
   }
   //storing sw
   if(!i){
-    data_Memory[(*ex_mem_l).Mem_addr]=(*ex_mem_l).src_data;
+    data_Memory[ex_mem_l.Mem_addr]=ex_mem_l.src_data;
   }
   //lw into the 
   if(!j){
-     (*ex_mem_l).dest_data=data_Memory[(*ex_mem_l).Mem_addr];
+     ex_mem_l.dest_data=data_Memory[ex_mem_l.Mem_addr];
   }
 
   if(m_cycles>=C){
     //EX_mem latch is clear to write too valid bit =1;
     m_cycles=0;// reset when reached
-    ex_mem_l->valid=1;
+    ex_mem_l.valid=1;
     //Writing to the MEM_WB latch
     
     printf("Memory access Complete\n");
@@ -358,12 +358,12 @@ void MEM(void){
   else{
     //EX_mem latch should not be written to. Still doing a mem access
     // so valid bit =0
-    ex_mem_l->valid=0;
+    ex_mem_l.valid=0;
     //Also add cycle cnter?
     m_cycles++;
     printf("Accessing Memory...\n");
   }
-  printf("%c%c\n", *((*ex_mem_l).Instruction), *((*ex_mem_l).Instruction+1));
+  printf("%c%c\n", *(ex_mem_l.Instruction), *(ex_mem_l.Instruction+1));
   
 }  
   
