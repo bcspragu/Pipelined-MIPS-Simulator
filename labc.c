@@ -227,3 +227,47 @@ int regValue(char* c){
   }
   return -1;
 }
+
+
+
+
+//Begin Zach being a tard
+
+typedef struct{
+  int valid;
+  char* Instruction;
+  char* Source_Reg;
+  char* Dest_Reg;
+  int Mem_addr;
+}latch;
+
+void MEM_STAGE(latch *MEM){
+  static int m_cycles=0;
+  char lw[2];
+  strcpy(lw, "lw");
+  char sw[2];
+  strcpy(sw,"sw");
+
+  int j=strcmp((*MEM).Instruction, sw);
+  int i=strcmp((*MEM).Instruction, lw);
+
+  printf("%d, %d\n",i, j);
+  if(!i|!j){
+    if(m_cycles>=C){
+      //EX_MEM latch is clear to write too valid bit =1;
+      m_cycles=0;// reset when reached
+      MEM->valid=1;
+      printf("Memory access Complete\n");
+    }
+    else{
+      //EX_MEM latch should not be written to. Still doing a mem access
+      // so valid bit =0
+      MEM->valid=0;
+      //Also add cycle cnter?
+      m_cycles++;
+      printf("Accessing Memory...\n");
+    }
+    printf("%c%c\n", *((*MEM).Instruction), *((*MEM).Instruction+1));
+  }
+}  
+  
