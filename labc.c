@@ -78,6 +78,7 @@ if_id_latch if_id_l;
 id_ex_latch id_ex_l;
 ex_mem_latch ex_mem_l;
 mem_wb_latch mem_wb_l;
+bool branch_pending = false;
 
 int program_counter = 0;
 
@@ -135,9 +136,20 @@ void parser(char* inst){
   program_counter++;
 }
 
-void IF(){};
-void ID(){};
-void EX(){};
+void IF(){
+  if(!branch_pending){
+    if_id_l.valid = true;
+    if_id_l.inst = instructions[program_counter];
+  }
+}
+
+void ID(){
+
+}
+
+void EX(){
+  
+}
 
 void MEM(void){
   static int m_cycles=0;
@@ -196,8 +208,11 @@ void MEM(void){
   
 }  
   
-void WB(){};
+void WB(){
+  
+}
 
+//All of the helper methods used by parser()
 void trimInstruction(char* instruction){
   int stage = 0; //How many times we've gone from not a space to a space
   int newIndex = 0;
