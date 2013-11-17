@@ -5,6 +5,7 @@
 #include <ctype.h>
 
 #define C 10
+
 typedef enum { false, true } bool;
 
 typedef enum {R, I, J} instruction_type;
@@ -34,6 +35,7 @@ bool isAValidCharacter(char);
 bool isAValidReg(char);
 void extractOpcode(char*, char*);
 int extractRegister(char*,int);
+int extractImmediate(char*);
 bool isRType(char* opcode);
 bool isIType(char* opcode);
 int regValue(char*);
@@ -42,7 +44,7 @@ instruction instructions[512];
 int program_counter = 0;
 
 int main(){
-  progScanner("prog1.asy");
+  progScanner("prog2.asy");
   return 0;
 }
 
@@ -67,12 +69,16 @@ void parser(char* inst){
     instruction instantiated_instruction = {R,rs,rt,rd,-1,false};
     instructions[program_counter] = instantiated_instruction;
   }else if(isIType(opcode)){
-    
+    int rs = extractRegister(inst,0);
+    int rt = extractRegister(inst,1);
+    int imm = extractImmediate(inst);
+    instruction instantiated_instruction = {R,rs,rt,-1,imm,false};
+    instructions[program_counter] = instantiated_instruction;
   }else if(strcmp(opcode,"haltSimulation") == 0){
     //Run it through the pipeline and shut shit down
   }else{
     //Unrecognized, crash the program
-    assert(!"Unrecognized instruction");
+    /*assert(!"Unrecognized instruction");*/
   }
   program_counter++;
 }
@@ -146,9 +152,32 @@ int extractRegister(char* instruction, int index){
   
   //Register is invalid
   if(regVal == -1){
+    //Presently commented out because of compilation issues
     /*assert(!"Register is invalid.");*/
   }
   return regVal;
+}
+
+int extractImmediate(char* instruction){
+  int i;
+  int regIndex = 0;
+  int charIndex = 0;
+  bool readOpcode = false;
+  char reg[6]; //To be able to hold $zero, which is 5 characters and the null character
+  
+  for(i = 0; instruction[i] != '\0'; i++){
+    if(readOpcode && instruction[i] == ','){
+      regIndex++;
+    }
+    if(readOpcode && isdigit(instruction[i]) && regIndex == 2){
+      reg[charIndex++] = instruction[i];
+    }
+    if(instruction[i] == ' '){
+      readOpcode = true;
+    }
+  }
+  reg[charIndex++] = '\0';
+  return atoi(reg);
 }
 
 bool isRType(char* opcode){
@@ -239,33 +268,33 @@ int regValue(char* c){
 
 //Begin Zach being a tard
 
-void mem_stage(latch *mem){
+void MEM(latch *memory){
   static int m_cycles=0;
   char lw[2];
   strcpy(lw, "lw");
   char sw[2];
   strcpy(sw,"sw");
 
-  int j=strcmp((*mem).Instruction, sw);
-  int i=strcmp((*mem).Instruction, lw);
+  int j=strcmp((*memory).Instruction, sw);
+  int i=strcmp((*memory).Instruction, lw);
 
   printf("%d, %d\n",i, j);
   if(!i|!j){
     if(m_cycles>=C){
-      //EX_mem latch is clear to write too valid bit =1;
+      //EX_memory latch is clear to write too valid bit =1;
       m_cycles=0;// reset when reached
-      mem->valid=1;
-      printf("Memory access Complete\n");
+      memory->valid=1;
+      printf("memoryory access Complete\n");
     }
     else{
-      //EX_mem latch should not be written to. Still doing a mem access
+      //EX_memory latch should not be written to. Still doing a memory access
       // so valid bit =0
-      mem->valid=0;
+      memory->valid=0;
       //Also add cycle cnter?
       m_cycles++;
-      printf("Accessing Memory...\n");
+      printf("Accessing memoryory...\n");
     }
-    printf("%c%c\n", *((*mem).Instruction), *((*mem).Instruction+1));
+    printf("%c%c\n", *((*memory).Instruction), *((*memory).Instruction+1));
   }
 }  
   
