@@ -146,7 +146,7 @@ void EX(){
   
 }
 
-void MEM(void){
+void MEM(){
   static int m_cycles=0;
   char lw[2];
   strcpy(lw, "lw");
@@ -160,9 +160,20 @@ void MEM(void){
   if(!i|!j){
     if(m_cycles>=C){
       //EX_memory latch is clear to write too valid bit =1;
-      m_cycles=0;// reset when reached
-      ex_mem_l.valid=1;
-      printf("memoryory access Complete\n");
+      // if(mem_wb_l.valid){ //in case we need a wb valid
+	m_cycles=0;// reset when reached
+	ex_mem_l.valid=1;
+	mem_wb_l.dest_reg=ex_mem_l.reg;
+	strcpy(mem_wb_l.Instruction, ex_mem_l.Instruction);
+	if(!i){
+	  mem_wb_l.dest_data=data_Memory[ex_mem_l.data];
+	}
+	//storing sw
+        if(!j){
+	  data_Memory[ex_mem_l.data]=ex_mem_l.data;
+        }
+	//}
+      printf("memory access Complete\n");
     }
     else{
       //EX_memory latch should not be written to. Still doing a memory access
@@ -172,36 +183,12 @@ void MEM(void){
       m_cycles++;
       printf("Accessing memory...\n");
     }
-    printf("%c%c\n", *(ex_mem_l.Instruction), *(ex_mem_l.Instruction+1));
-  }
-  //storing sw
-  if(!i){
-    data_Memory[ex_mem_l.Mem_addr]=ex_mem_l.src_data;
-  }
-  //lw into the 
-  if(!j){
-     ex_mem_l.dest_data=data_Memory[ex_mem_l.Mem_addr];
-  }
-
-  if(m_cycles>=C){
-    //EX_mem latch is clear to write too valid bit =1;
-    m_cycles=0;// reset when reached
-    ex_mem_l.valid=1;
-    //Writing to the MEM_WB latch
-    
-    printf("Memory access Complete\n");
-  }
-  else{
-    //EX_mem latch should not be written to. Still doing a mem access
-    // so valid bit =0
-    ex_mem_l.valid=0;
-    //Also add cycle cnter?
-    m_cycles++;
-    printf("Accessing Memory...\n");
   }
   printf("%c%c\n", *(ex_mem_l.Instruction), *(ex_mem_l.Instruction+1));
   
 }  
+  
+
   
 void WB(){
   
@@ -394,50 +381,3 @@ int regValue(char* c){
 }
 
 
-//Begin Zach being a tard
-
-
-void MEM(void){
-  static int m_cycles=0;
-  char lw[2];
-  strcpy(lw, "lw");
-  char sw[2];
-  strcpy(sw,"sw");
-
-  int j=strcmp(ex_mem_l.Instruction, sw);
-  int i=strcmp(ex_mem_l.Instruction, lw);
-
-  printf("%d, %d\n",i, j);
-  if(!i|!j){
-    if(m_cycles>=C){
-      //EX_memory latch is clear to write too valid bit =1;
-      // if(mem_wb_l.valid){ //in case we need a wb valid
-	m_cycles=0;// reset when reached
-	ex_mem_l.valid=1;
-	mem_wb_l.dest_reg=ex_mem_l.reg;
-	strcpy(mem_wb_l.Instruction, ex_mem_l.Instruction);
-	if(!i){
-	  mem_wb_l.dest_data=data_Memory[ex_mem_l.data];
-	}
-	//storing sw
-        if(!j){
-	  data_Memory[ex_mem_l.data]=ex_mem_l.data;
-        }
-	//}
-      printf("memory access Complete\n");
-    }
-    else{
-      //EX_memory latch should not be written to. Still doing a memory access
-      // so valid bit =0
-      ex_mem_l.valid=0;
-      //Also add cycle cnter?
-      m_cycles++;
-      printf("Accessing memory...\n");
-    }
-  }
-  
-
-  printf("%c%c\n", *(ex_mem_l.Instruction), *(ex_mem_l.Instruction+1));
-  
-}  
-  
