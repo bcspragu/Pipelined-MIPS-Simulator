@@ -34,13 +34,13 @@ typedef struct{
 
 typedef struct{
   bool valid;
-  char Instruction[20]; 
+  char* Instruction; 
   int data;
   int reg;
 } ex_mem_latch;
 
 typedef struct{
-  char Instruction[20];
+  char* Instruction;
   bool valid;
   int dest_reg;
   int dest_data;
@@ -190,11 +190,11 @@ void EX(){
 
 void MEM(){
   static int m_cycles=0;
-  char lw[2];
+  static char lw[2];
   strcpy(lw, "lw");
-  char sw[2];
+  static char sw[2];
   strcpy(sw,"sw");
-
+  assert(ex_mem_l.Instruction != NULL);
   int j=strcmp(ex_mem_l.Instruction, sw);
   int i=strcmp(ex_mem_l.Instruction, lw);
 
@@ -205,12 +205,14 @@ void MEM(){
 	m_cycles=0;// reset when reached
 	ex_mem_l.valid=1;
 	mem_wb_l.dest_reg=ex_mem_l.reg;
-	strcpy(mem_wb_l.Instruction, ex_mem_l.Instruction);
+	mem_wb_l.Instruction=ex_mem_l.Instruction;
 	if(!i){
+	  assert(data_Memory[ex_mem_l.data] != NULL);
 	  mem_wb_l.dest_data=data_Memory[ex_mem_l.data];
 	}
 	//storing sw
         if(!j){
+	  assert(data_Memory[ex_mem_l.data] != NULL);
 	  data_Memory[ex_mem_l.data]=ex_mem_l.data;
         }
 	//}
@@ -224,13 +226,25 @@ void MEM(){
       m_cycles++;
       printf("Accessing memory...\n");
     }
-  }  
+  }
+  else{
+    assert(ex_mem_l.reg != NULL);
+     mem_wb_l.dest_reg=ex_mem_l.reg;
+     mem_wb_l.Instruction=ex_mem_l.Instruction;
+     mem_wb_l.dest_data=ex_mem_l.data;
+     
+  }
 }  
   
 
   
 void WB(){
-  
+  char sw[2];
+  strcpy(sw,"sw");
+  assert(mem_wb_l.Instruction != NULL);
+  if(!strcmp(mem_wb_l.Instruction, sw)){
+    registers[mem_wb_l.dest_reg]=mem_wb_l.dest_data;
+  }
 }
 
 //All of the helper methods used by parser()
