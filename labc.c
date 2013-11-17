@@ -183,9 +183,7 @@ void MEM(){
       m_cycles++;
       printf("Accessing memory...\n");
     }
-  }
-  printf("%c%c\n", *(ex_mem_l.Instruction), *(ex_mem_l.Instruction+1));
-  
+  }  
 }  
   
 
