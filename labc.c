@@ -301,47 +301,47 @@ int regValue(char* c){
 //Begin Zach being a tard
 
 
-void MEM(ex_mem_latch *memory, mem_wb_latch *wbl){
+void MEM(void){
   static int m_cycles=0;
   char lw[2];
   strcpy(lw, "lw");
   char sw[2];
   strcpy(sw,"sw");
 
-  int j=strcmp((*memory).Instruction, sw);
-  int i=strcmp((*memory).Instruction, lw);
+  int j=strcmp((*ex_mem_l).Instruction, sw);
+  int i=strcmp((*ex_mem_l).Instruction, lw);
 
   printf("%d, %d\n",i, j);
   if(!i|!j){
     if(m_cycles>=C){
       //EX_memory latch is clear to write too valid bit =1;
       m_cycles=0;// reset when reached
-      memory->valid=1;
+      ex_mem_l->valid=1;
       printf("memoryory access Complete\n");
     }
     else{
       //EX_memory latch should not be written to. Still doing a memory access
       // so valid bit =0
-      memory->valid=0;
+      ex_mem_l->valid=0;
       //Also add cycle cnter?
       m_cycles++;
       printf("Accessing memory...\n");
     }
-    printf("%c%c\n", *((*memory).Instruction), *((*memory).Instruction+1));
+    printf("%c%c\n", *((*ex_mem_l).Instruction), *((*ex_mem_l).Instruction+1));
   }
   //storing sw
   if(!i){
-    data_Memory[(*memory).Mem_addr]=(*memory).src_data;
+    data_Memory[(*ex_mem_l).Mem_addr]=(*ex_mem_l).src_data;
   }
   //lw into the 
   if(!j){
-     (*memory).dest_data=data_Memory[(*memory).Mem_addr];
+     (*ex_mem_l).dest_data=data_Memory[(*ex_mem_l).Mem_addr];
   }
 
   if(m_cycles>=C){
     //EX_mem latch is clear to write too valid bit =1;
     m_cycles=0;// reset when reached
-    memory->valid=1;
+    ex_mem_l->valid=1;
     //Writing to the MEM_WB latch
     
     printf("Memory access Complete\n");
@@ -349,12 +349,12 @@ void MEM(ex_mem_latch *memory, mem_wb_latch *wbl){
   else{
     //EX_mem latch should not be written to. Still doing a mem access
     // so valid bit =0
-    memory->valid=0;
+    ex_mem_l->valid=0;
     //Also add cycle cnter?
     m_cycles++;
     printf("Accessing Memory...\n");
   }
-  printf("%c%c\n", *((*memory).Instruction), *((*memory).Instruction+1));
+  printf("%c%c\n", *((*ex_mem_l).Instruction), *((*ex_mem_l).Instruction+1));
   
 }  
   
