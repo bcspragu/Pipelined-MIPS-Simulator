@@ -10,10 +10,9 @@ typedef enum { false, true } bool;
 
 typedef enum {R, I, J} instruction_type;
 
-typedef enum {ADD, SUB, MUL} operation;
-
 typedef struct {
   instruction_type type;
+  char* op;
   int rs;
   int rt;
   int rd;
@@ -30,7 +29,7 @@ typedef struct{
   bool valid;
   int r1;
   int r2;
-  operation op;
+  char* op;
 } id_ex_latch;
 
 typedef struct{
@@ -68,6 +67,7 @@ void MEM();
 void WB();
 
 int data_Memory[512];
+int registers[32];
 instruction instructions[512];
 if_id_latch if_id_l;
 id_ex_latch id_ex_l;
@@ -90,6 +90,14 @@ int main(){
     IF();
     program_counter++;
   }
+  int i;
+  for(i = 0; i < 5; i++){
+    WB();
+    MEM();
+    EX();
+    ID();
+    IF();
+  }
   return 0;
 }
 
@@ -105,25 +113,26 @@ void progScanner(char* filename){
 
 void parser(char* inst){
   trimInstruction(inst);
-  char opcode[10];
+  //To hold haltSimultion, needs 15 chars
+  char opcode[15];
   extractOpcode(opcode,inst);
   //R Type as fuck
   if(isRType(opcode)){
     int rs = extractRegister(inst,0);
     int rt = extractRegister(inst,1);
     int rd = extractRegister(inst,2);
-    instruction instantiated_instruction = {R,rs,rt,rd,-1,false};
+    instruction instantiated_instruction = {R,opcode,rs,rt,rd,-1,false};
     instructions[program_counter] = instantiated_instruction;
   }else if(isIType(opcode)){
     int rs = extractRegister(inst,0);
     int rt = extractRegister(inst,1);
     int imm = extractImmediate(inst);
-    instruction instantiated_instruction = {I,rs,rt,-1,imm,false};
+    instruction instantiated_instruction = {I,opcode,rs,rt,-1,imm,false};
     instructions[program_counter] = instantiated_instruction;
   }else if(strcmp(opcode,"haltSimulation") == 0){
     //Run it through the pipeline and shut shit down
     //It doesn't matter which type of instruction it is, isHalt is true
-    instruction instantiated_instruction = {R,-1,-1,-1,-1,true};
+    instruction instantiated_instruction = {R,opcode,-1,-1,-1,-1,true};
     instructions[program_counter] = instantiated_instruction;
   }else{
     assert(!"Unrecognized instruction");
@@ -132,14 +141,47 @@ void parser(char* inst){
 }
 
 void IF(){
-  if(!branch_pending){
+  //Make sure that the ID stage has invalidated the latch
+  if(!if_id_l.valid){
     if_id_l.valid = true;
     if_id_l.inst = instructions[program_counter];
   }
 }
 
 void ID(){
-
+  bool raw_hazard = false;
+  if(if_id_l.valid){
+    instruction inst = if_id_l.inst;
+    /*Checking for RAW hazard
+     Need to see if the registers we're
+     currently looking at are being worked
+     on in the EX or MEM stages
+    */
+    if(inst.type == R){
+      //Need to check that rs and rt aren't targets of future ops
+      if(inst.rs == ex_mem_l.reg && strcmp(ex_mem_l.Instruction,"lw") == 0){
+        raw_hazard = true;
+      }
+      if(inst.rt == ex_mem_l.reg && strcmp(ex_mem_l.Instruction,"lw") == 0){
+        raw_hazard = true;
+      }
+      if(inst.rs == mem_wb_l.dest_reg){
+        raw_hazard = true;
+      }
+      if(inst.rt == mem_wb_l.dest_reg){
+        raw_hazard = true;
+      }
+    }
+    else if(inst.type == I){
+      //Need to check that rs isn't target of future operation
+    }
+    if(!raw_hazard){
+      if_id_l.valid = false;
+    }
+    else{
+      printf("RAW Hazard, waiting");
+    }
+  }
 }
 
 void EX(){
