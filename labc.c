@@ -21,20 +21,20 @@ typedef struct {
 
 typedef struct{
   int valid;
-  char* Instruction;
-  char* Source_Reg;
+  char Instruction[20];
+  char Source_Reg[15];
   int src_data;
-  char* Dest_Reg;
+  char Dest_Reg[15];
   int dest_data;
   int Mem_addr;
 } ex_mem_latch;
 
 typedef struct{
   int valid;
-  char* Instruction;
-  char* Source_Reg;
+  char Instruction[20];
+  char Source_Reg[20];
   int scr_data;
-  char* Dest_Reg;
+  char Dest_Reg[20];
   int dest_data;
 }mem_wb_latch;  
 
@@ -283,7 +283,7 @@ int regValue(char* c){
 //Begin Zach being a tard
 
 
-void MEM(latch *memory, mem_wb_latch *wbl){
+void MEM(ex_mem_latch *memory, mem_wb_latch *wbl){
   static int m_cycles=0;
   char lw[2];
   strcpy(lw, "lw");
@@ -310,19 +310,20 @@ void MEM(latch *memory, mem_wb_latch *wbl){
       printf("Accessing memory...\n");
     }
     printf("%c%c\n", *((*memory).Instruction), *((*memory).Instruction+1));
+  }
   //storing sw
   if(!i){
-    data_Memory[(*memory).Mem_Addr]=(*memory).scr_data;
+    data_Memory[(*memory).Mem_addr]=(*memory).src_data;
   }
   //lw into the 
   if(!j){
-     (*mem).dest_data=data_Memory[(*mem).Mem_Addr];
+     (*memory).dest_data=data_Memory[(*memory).Mem_addr];
   }
 
   if(m_cycles>=C){
     //EX_mem latch is clear to write too valid bit =1;
     m_cycles=0;// reset when reached
-    mem->valid=1;
+    memory->valid=1;
     //Writing to the MEM_WB latch
     
     printf("Memory access Complete\n");
@@ -330,12 +331,12 @@ void MEM(latch *memory, mem_wb_latch *wbl){
   else{
     //EX_mem latch should not be written to. Still doing a mem access
     // so valid bit =0
-    mem->valid=0;
+    memory->valid=0;
     //Also add cycle cnter?
     m_cycles++;
     printf("Accessing Memory...\n");
   }
-  printf("%c%c\n", *((*mem).Instruction), *((*mem).Instruction+1));
+  printf("%c%c\n", *((*memory).Instruction), *((*memory).Instruction+1));
   
 }  
   
