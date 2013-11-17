@@ -10,6 +10,8 @@ typedef enum { false, true } bool;
 
 typedef enum {R, I, J} instruction_type;
 
+typedef enum {ADD, SUB, MUL} operation;
+
 typedef struct {
   instruction_type type;
   int rs;
@@ -23,6 +25,13 @@ typedef struct{
   bool valid;
   instruction inst;
 } if_id_latch;
+
+typedef struct{
+  bool valid;
+  int r1;
+  int r2;
+  operation op;
+} id_ex_latch;
 
 typedef struct{
   bool valid;
