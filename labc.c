@@ -21,6 +21,11 @@ typedef struct {
 
 typedef struct{
   int valid;
+  instruction inst;
+} if_id_latch;
+
+typedef struct{
+  int valid;
   char* Instruction;
   char* Source_Reg;
   int src_data;
@@ -36,7 +41,7 @@ typedef struct{
   int scr_data;
   char* Dest_Reg;
   int dest_data;
-}mem_wb_latch;  
+} mem_wb_latch;  
 
 
 
