@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#define C 10
 typedef enum { false, true } bool;
 
 typedef enum {R, I, J} instruction_type;
@@ -16,6 +17,14 @@ typedef struct {
   int i;
   bool isHalt;
 } instruction;
+
+typedef struct{
+  int valid;
+  char* Instruction;
+  char* Source_Reg;
+  char* Dest_Reg;
+  int Mem_addr;
+} latch;
 
 //Function forward declarations
 void progScanner(char*);
@@ -137,7 +146,7 @@ int extractRegister(char* instruction, int index){
   
   //Register is invalid
   if(regVal == -1){
-    assert(!"Register is invalid.");
+    /*assert(!"Register is invalid.");*/
   }
   return regVal;
 }
@@ -228,46 +237,35 @@ int regValue(char* c){
   return -1;
 }
 
-
-
-
 //Begin Zach being a tard
 
-typedef struct{
-  int valid;
-  char* Instruction;
-  char* Source_Reg;
-  char* Dest_Reg;
-  int Mem_addr;
-}latch;
-
-void MEM_STAGE(latch *MEM){
+void mem_stage(latch *mem){
   static int m_cycles=0;
   char lw[2];
   strcpy(lw, "lw");
   char sw[2];
   strcpy(sw,"sw");
 
-  int j=strcmp((*MEM).Instruction, sw);
-  int i=strcmp((*MEM).Instruction, lw);
+  int j=strcmp((*mem).Instruction, sw);
+  int i=strcmp((*mem).Instruction, lw);
 
   printf("%d, %d\n",i, j);
   if(!i|!j){
     if(m_cycles>=C){
-      //EX_MEM latch is clear to write too valid bit =1;
+      //EX_mem latch is clear to write too valid bit =1;
       m_cycles=0;// reset when reached
-      MEM->valid=1;
+      mem->valid=1;
       printf("Memory access Complete\n");
     }
     else{
-      //EX_MEM latch should not be written to. Still doing a mem access
+      //EX_mem latch should not be written to. Still doing a mem access
       // so valid bit =0
-      MEM->valid=0;
+      mem->valid=0;
       //Also add cycle cnter?
       m_cycles++;
       printf("Accessing Memory...\n");
     }
-    printf("%c%c\n", *((*MEM).Instruction), *((*MEM).Instruction+1));
+    printf("%c%c\n", *((*mem).Instruction), *((*mem).Instruction+1));
   }
 }  
   
