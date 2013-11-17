@@ -55,8 +55,14 @@ int extractImmediate(char*);
 bool isRType(char* opcode);
 bool isIType(char* opcode);
 int regValue(char*);
+
 int data_Memory[512];
 instruction instructions[512];
+if_id_latch if_id_l;
+id_ex_latch id_ex_l;
+ex_mem_latch ex_mem_l;
+mem_wb_latch mem_wb_l;
+
 int program_counter = 0;
 
 int main(){
