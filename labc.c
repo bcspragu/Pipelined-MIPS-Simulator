@@ -6,6 +6,17 @@
 
 typedef enum { false, true } bool;
 
+typedef enum {R, I, J} instruction_type;
+
+typedef struct {
+  instruction_type type;
+  int rs;
+  int rt;
+  int rd;
+  int i;
+  bool isHalt;
+} instruction;
+
 //Function forward declarations
 void progScanner(char*);
 void parser(char*);
@@ -18,29 +29,34 @@ bool isRType(char* opcode);
 bool isIType(char* opcode);
 int regValue(char*);
 
+instruction instructions[512];
+int program_counter = 0;
+
 int main(){
   progScanner("prog1.asy");
   return 0;
 }
 
 void progScanner(char* filename){
-  char instruction[100];
+  char instruction_string[100];
   FILE *instFile = fopen(filename,"r");
-  while(fgets(instruction,100,instFile)){
-    parser(instruction);
+  while(fgets(instruction_string,100,instFile)){
+    parser(instruction_string);
   }
   fclose(instFile);
 }
 
-void parser(char* instruction){
-  trimInstruction(instruction);
+void parser(char* inst){
+  trimInstruction(inst);
   char opcode[10];
-  extractOpcode(opcode,instruction);
+  extractOpcode(opcode,inst);
   //R Type as fuck
   if(isRType(opcode)){
-    int rs = extractRegister(instruction,0);
-    int rt = extractRegister(instruction,1);
-    int rd = extractRegister(instruction,2);
+    int rs = extractRegister(inst,0);
+    int rt = extractRegister(inst,1);
+    int rd = extractRegister(inst,2);
+    instruction instantiated_instruction = {R,rs,rt,rd,-1,false};
+    instructions[program_counter] = instantiated_instruction;
   }else if(isIType(opcode)){
     
   }else if(strcmp(opcode,"haltSimulation") == 0){
@@ -49,6 +65,7 @@ void parser(char* instruction){
     //Unrecognized, crash the program
     assert(!"Unrecognized instruction");
   }
+  program_counter++;
 }
 
 void trimInstruction(char* instruction){
@@ -115,13 +132,11 @@ int extractRegister(char* instruction, int index){
   if(reg[0] != '$'){
     assert(!"Register didn't start with a dollar sign");
   }
-  //Set regValue the string without the dollar sign
+  //Set regValue to  the string without the dollar sign
   int regVal = regValue(reg+1);
-  if(regVal != -1){
-    //Store that register in the struct for that instruction
-    printf("%d\n", regVal);
-  }else{
-    //Register is invalid
+  
+  //Register is invalid
+  if(regVal == -1){
     assert(!"Register is invalid.");
   }
   return regVal;
