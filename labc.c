@@ -11,7 +11,8 @@
 
 typedef enum { false, true } bool;
 
-typedef enum {R, I, J} instruction_type;
+//Bubble type B
+typedef enum {R, I, B} instruction_type;
 
 typedef struct {
   instruction_type type;
@@ -48,6 +49,7 @@ int extractImmediate(char*);
 bool isRType(char* opcode);
 bool isIType(char* opcode);
 int regValue(char*);
+int rawHazard();
 
 //Stage declarations
 void IF();
@@ -59,6 +61,7 @@ void WB();
 int data_mem[512];
 int registers[32];
 instruction instructions[512];
+instruction bubble = {B,"bubble",0,0,0,0,false};
 
 latch if_id_l = { .warmed_up = false };
 latch id_ex_l = { .warmed_up = false };
@@ -69,7 +72,7 @@ bool branch_pending = false;
 int program_counter = 0;
 
 int main(){
-  progScanner("prog2.asy");
+  progScanner("prog1.asy");
   //Once we've read everything in, reset the program_counter
   program_counter = 0;
   //Then we get this thing going
@@ -152,6 +155,7 @@ void IF(){
   if(!if_id_l.valid){
     if_id_l.valid = true;
     if_id_l.inst = instructions[program_counter++];
+    printf("pulling new instruction\n");
     if(!if_id_l.warmed_up){
       if_id_l.warmed_up = true;
     }
@@ -159,136 +163,134 @@ void IF(){
 }
 
 void ID(){
-  bool raw_hazard = false;
   if(if_id_l.valid && if_id_l.warmed_up && !id_ex_l.valid){
-    instruction inst = if_id_l.inst;
-    /*Checking for RAW hazard
-      Need to see if the registers we're
-      currently looking at are being worked
-      on in the EX or MEM stages
-      */
-
-    if(ex_mem_l.warmed_up && inst.rs == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
-      raw_hazard = true;
-    }
-
-    if(mem_wb_l.warmed_up && inst.rs == mem_wb_l.inst.dest){
-      raw_hazard = true;
-    }
-
-    if(inst.type == R){
-      //Need to check that rs and rt aren't targets of future ops
-      if(ex_mem_l.warmed_up && inst.rt == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
-        raw_hazard = true;
-      }
-      if(ex_mem_l.warmed_up && inst.rt == mem_wb_l.inst.dest){
-        raw_hazard = true;
-      }
-    }
-    if(!raw_hazard){
+    if(rawHazard() == -1){
       if_id_l.valid = false;
+      id_ex_l.valid = true;
+      id_ex_l.inst = if_id_l.inst;
+      if(!id_ex_l.warmed_up){
+        id_ex_l.warmed_up = true;
+      }
     }
     else{
-      //Waiting, raw hazhardon
-    }
-    id_ex_l.inst = if_id_l.inst;
-    id_ex_l.valid = true;
-    if(!id_ex_l.warmed_up){
-      id_ex_l.warmed_up = true;
+      id_ex_l.valid = true;
+      id_ex_l.inst = bubble;
+      printf("throw dem bubs\n");
     }
   }
 }
 
 void EX(){
-  /*raise(SIGINT);*/
   if(id_ex_l.warmed_up && id_ex_l.valid){
     static int e_cycles = 0;
-    if(!ex_mem_l.valid  && ((e_cycles == M && strcmp(id_ex_l.inst.op,"mul") == 0) || (e_cycles == N && strcmp(id_ex_l.inst.op,"mul") != 0)) ){
-      if((strcmp(id_ex_l.inst.op,"add") * strcmp(id_ex_l.inst.op,"lw") * strcmp(id_ex_l.inst.op, "sw")) == 0){
-        ex_mem_l.data = registers[id_ex_l.inst.rs] + registers[id_ex_l.inst.rt];
-      }
-      else if(strcmp(id_ex_l.inst.op,"addi") == 0){
-        ex_mem_l.data = registers[id_ex_l.inst.rs] + id_ex_l.inst.i;
-      }
-      else if(strcmp(id_ex_l.inst.op,"sub") == 0){
-        ex_mem_l.data = registers[id_ex_l.inst.rs] - registers[id_ex_l.inst.rt];
-      }
-      else if(strcmp(id_ex_l.inst.op,"mul") == 0){
-        ex_mem_l.data = registers[id_ex_l.inst.rs] * registers[id_ex_l.inst.rt];
-      }
-      else if(strcmp(id_ex_l.inst.op, "beq") == 0){
-        if(registers[id_ex_l.inst.rs] == registers[id_ex_l.inst.rt]){
-          program_counter = program_counter + id_ex_l.inst.i;
-        }
-      }
-      else if(strcmp(id_ex_l.inst.op, "haltSimulation") == 0){
-        //Butt fuck it
-      }
-      else {
-        assert(!"Unrecognized instruction");
-      }
-      e_cycles = 0;
-      id_ex_l.valid = false;
-      ex_mem_l.valid = true;
-      ex_mem_l.inst = id_ex_l.inst;
-      if(!ex_mem_l.warmed_up){
-        ex_mem_l.warmed_up = true;
+    if(id_ex_l.inst.type == B){
+      if(!ex_mem_l.valid){
+        //Pass down the bubble
+        id_ex_l.valid = false;
+        ex_mem_l.valid = true;
+        ex_mem_l.inst = id_ex_l.inst;
       }
     }
-    else if(e_cycles < M){
-      e_cycles++;
+    else{
+      if(!ex_mem_l.valid  && ((e_cycles == M && strcmp(id_ex_l.inst.op,"mul") == 0) || (e_cycles == N && strcmp(id_ex_l.inst.op,"mul") != 0)) ){
+        if((strcmp(id_ex_l.inst.op,"add") * strcmp(id_ex_l.inst.op,"lw") * strcmp(id_ex_l.inst.op, "sw")) == 0){
+          ex_mem_l.data = registers[id_ex_l.inst.rs] + registers[id_ex_l.inst.rt];
+        }
+        else if(strcmp(id_ex_l.inst.op,"addi") == 0){
+          ex_mem_l.data = registers[id_ex_l.inst.rs] + id_ex_l.inst.i;
+        }
+        else if(strcmp(id_ex_l.inst.op,"sub") == 0){
+          ex_mem_l.data = registers[id_ex_l.inst.rs] - registers[id_ex_l.inst.rt];
+        }
+        else if(strcmp(id_ex_l.inst.op,"mul") == 0){
+          ex_mem_l.data = registers[id_ex_l.inst.rs] * registers[id_ex_l.inst.rt];
+        }
+        else if(strcmp(id_ex_l.inst.op, "beq") == 0){
+          if(registers[id_ex_l.inst.rs] == registers[id_ex_l.inst.rt]){
+            program_counter = program_counter + id_ex_l.inst.i + 1;
+          }
+        }
+        else if(strcmp(id_ex_l.inst.op, "haltSimulation") == 0){
+          //Butt fuck it
+        }
+        else {
+          assert(!"Unrecognized instruction");
+        }
+        e_cycles = 0;
+        id_ex_l.valid = false;
+        ex_mem_l.valid = true;
+        ex_mem_l.inst = id_ex_l.inst;
+        if(!ex_mem_l.warmed_up){
+          ex_mem_l.warmed_up = true;
+        }
+      }
+      else if(e_cycles < M){
+        e_cycles++;
+      }
     }
   }
 }
 
 void MEM(){
   if(ex_mem_l.warmed_up && ex_mem_l.valid){
-    static int m_cycles = 0;
-
-    assert(ex_mem_l.inst.op != NULL);
-    bool is_lw = strcmp(ex_mem_l.inst.op, "lw") == 0;
-    bool is_sw = strcmp(ex_mem_l.inst.op, "sw") == 0;
-
-    if(is_lw || is_sw){
-      if(m_cycles == C && !mem_wb_l.valid){
-        //EX_memory latch is clear to write too valid bit =1;
-        m_cycles = 0;// reset when reached
+    if(ex_mem_l.inst.type == B){
+      if(!mem_wb_l.valid){
+        //Pass down the bubble
         ex_mem_l.valid = false;
-        mem_wb_l.valid = true; 
+        mem_wb_l.valid = true;
         mem_wb_l.inst = ex_mem_l.inst;
-        if(!mem_wb_l.warmed_up){
-          mem_wb_l.warmed_up = true;
-        }
-        if(is_lw){
-          assert(&data_mem[ex_mem_l.data] != NULL);
-          mem_wb_l.data = data_mem[ex_mem_l.data];
-        }
-        //storing sw
-        if(is_sw){
-          assert(&data_mem[ex_mem_l.data] != NULL);
-          data_mem[ex_mem_l.data] = ex_mem_l.data;
-        }
-      }
-      else if(m_cycles < C){
-        m_cycles++;
       }
     }
     else{
-      assert(&ex_mem_l.inst.dest != NULL);
-      ex_mem_l.valid = false;
-      mem_wb_l.valid = true; 
-      mem_wb_l.inst = ex_mem_l.inst;
-      mem_wb_l.data = ex_mem_l.data;
-      if(!mem_wb_l.warmed_up){
-        mem_wb_l.warmed_up = true;
+      static int m_cycles = 0;
+
+      assert(ex_mem_l.inst.op != NULL);
+      bool is_lw = strcmp(ex_mem_l.inst.op, "lw") == 0;
+      bool is_sw = strcmp(ex_mem_l.inst.op, "sw") == 0;
+
+      if(is_lw || is_sw){
+        if(m_cycles == C && !mem_wb_l.valid){
+          //EX_memory latch is clear to write too valid bit =1;
+          m_cycles = 0;// reset when reached
+          ex_mem_l.valid = false;
+          mem_wb_l.valid = true; 
+          mem_wb_l.inst = ex_mem_l.inst;
+          if(!mem_wb_l.warmed_up){
+            mem_wb_l.warmed_up = true;
+          }
+          if(is_lw){
+            assert(&data_mem[ex_mem_l.data] != NULL);
+            mem_wb_l.data = data_mem[ex_mem_l.data];
+          }
+          //storing sw
+          if(is_sw){
+            assert(&data_mem[ex_mem_l.data] != NULL);
+            data_mem[ex_mem_l.data] = ex_mem_l.data;
+          }
+        }
+        else if(m_cycles < C){
+          m_cycles++;
+        }
+      }
+      else{
+        assert(&ex_mem_l.inst.dest != NULL);
+        ex_mem_l.valid = false;
+        mem_wb_l.valid = true; 
+        mem_wb_l.inst = ex_mem_l.inst;
+        mem_wb_l.data = ex_mem_l.data;
+        if(!mem_wb_l.warmed_up){
+          mem_wb_l.warmed_up = true;
+        }
       }
     }
   }
 }  
 
 void WB(){
-  if(mem_wb_l.valid && mem_wb_l.warmed_up && strcmp(mem_wb_l.inst.op,"sw") != 0 && strcmp(mem_wb_l.inst.op,"haltSimulation") != 0 && mem_wb_l.inst.dest != 0){
-    registers[mem_wb_l.inst.dest] = mem_wb_l.data;
+  if(mem_wb_l.valid && mem_wb_l.warmed_up){
+    if(strcmp(mem_wb_l.inst.op,"sw") != 0 && strcmp(mem_wb_l.inst.op,"haltSimulation") != 0 && mem_wb_l.inst.dest != 0 && mem_wb_l.inst.type != B){
+      registers[mem_wb_l.inst.dest] = mem_wb_l.data;
+    }   
     mem_wb_l.valid = false; 
   }
 }
@@ -482,3 +484,34 @@ int regValue(char* c){
 }
 
 
+int rawHazard(){
+  instruction inst = if_id_l.inst;
+  if(id_ex_l.warmed_up && inst.rs == id_ex_l.inst.dest && strcmp(id_ex_l.inst.op,"sw") != 0){
+    return inst.rs;
+  }
+
+  if(ex_mem_l.warmed_up && inst.rs == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
+    return inst.rs;
+  }
+
+  if(mem_wb_l.warmed_up && inst.rs == mem_wb_l.inst.dest && strcmp(mem_wb_l.inst.op,"sw") != 0){
+    return inst.rs;
+  }
+
+  if(inst.type == R || strcmp(inst.op,"beq") == 0){
+    //Need to check that rs and rt aren't targets of future ops
+    if(id_ex_l.warmed_up && inst.rt == id_ex_l.inst.dest && strcmp(id_ex_l.inst.op,"sw") != 0){
+      return inst.rt;
+    }
+
+    if(ex_mem_l.warmed_up && inst.rt == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
+      return inst.rt;
+    }
+
+    if(mem_wb_l.warmed_up && inst.rt == mem_wb_l.inst.dest && strcmp(mem_wb_l.inst.op,"sw") != 0){
+      return inst.rt;
+    }
+  }
+
+  return -1;
+}
