@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define C 10
+#define C 100
 #define N 10
 #define M 15
 
@@ -13,9 +13,11 @@ typedef enum { false, true } bool;
 //Bubble type B
 typedef enum {R, I, B} instruction_type;
 
+typedef enum {ADD, ADDI, MUL, SUB, BEQ, LW, SW, BUBBLE, HALTSIMULATION} opcode;
+
 typedef struct {
   instruction_type type;
-  char* op;
+  opcode op;
   int rs;
   int rt;
   int dest;
@@ -46,6 +48,7 @@ char* extractOpcode(char*);
 int extractRegister(char*,int);
 int extractImmediate(char*,int);
 int extractBase(char*);
+opcode stringToOpcode(char*);
 bool isRType(char* opcode);
 bool isIType(char* opcode);
 int regValue(char*);
@@ -63,7 +66,7 @@ void WB();
 int data_mem[512];
 int registers[32];
 instruction instructions[512];
-instruction bubble = {B,"bubble",0,0,0,0,false};
+instruction bubble = {B,BUBBLE,0,0,0,0,false};
 
 latch if_id_l = { .warmed_up = false };
 latch id_ex_l = { .warmed_up = false };
@@ -86,7 +89,7 @@ int wbUtil = 0;
 char blank[2]; //We read the ENTER character into here
 
 int main(){
-  progScanner("prog7.asy");
+  progScanner("prog1.asy");
   //Once we've read everything in, reset the program_counter
   program_counter = 0;
   //Then start iterating over the pipelined stages in reverse
@@ -126,7 +129,7 @@ void parser(char* inst){
     int rt = extractRegister(inst,2);
     int rd = extractRegister(inst,0);
     instructions[program_counter].type = R;
-    instructions[program_counter].op = opcode;
+    instructions[program_counter].op = stringToOpcode(opcode);
     instructions[program_counter].rs = rs;
     instructions[program_counter].rt = rt;
     instructions[program_counter].dest = rd;
@@ -144,7 +147,7 @@ void parser(char* inst){
       imm = extractImmediate(inst,1);
     }
     instructions[program_counter].type = I;
-    instructions[program_counter].op = opcode;
+    instructions[program_counter].op = stringToOpcode(opcode);
     instructions[program_counter].rs = rs;
     instructions[program_counter].rt = rt;
     instructions[program_counter].dest = rt;
@@ -153,7 +156,7 @@ void parser(char* inst){
   }else if(strcmp(opcode,"haltSimulation") == 0){
     //Run the haltSimulation instruction through the pipeline and close it down
     instructions[program_counter].type = B;
-    instructions[program_counter].op = opcode;
+    instructions[program_counter].op = HALTSIMULATION;
     instructions[program_counter].rs = -1;
     instructions[program_counter].rt = -1;
     instructions[program_counter].dest = -1;
@@ -190,7 +193,7 @@ void ID(){
     //If there's no hazard
     if(rawHazard() == -1){
       //If it's a branch, send it along to ex, IF will wait
-      if(strcmp(if_id_l.inst.op,"beq") == 0){
+      if(if_id_l.inst.op == BEQ){
         branch_pending = true;
       }
       if_id_l.valid = false;
@@ -222,20 +225,20 @@ void EX(){
       }
     }
     else{
-      if(!ex_mem_l.valid  && ((e_cycles == M && strcmp(id_ex_l.inst.op,"mul") == 0) || (e_cycles == N && strcmp(id_ex_l.inst.op,"mul") != 0)) ){
-        if(strcmp(id_ex_l.inst.op,"add") == 0){
+      if(!ex_mem_l.valid  && ((e_cycles == M && id_ex_l.inst.op == MUL) || (e_cycles == N && id_ex_l.inst.op != MUL)) ){
+        if(id_ex_l.inst.op == ADD){
           ex_mem_l.data = registers[id_ex_l.inst.rs] + registers[id_ex_l.inst.rt];
         }
-        else if(strcmp(id_ex_l.inst.op,"addi") == 0){
+        else if(id_ex_l.inst.op == ADDI){
           ex_mem_l.data = registers[id_ex_l.inst.rs] + id_ex_l.inst.i;
         }
-        else if(strcmp(id_ex_l.inst.op,"sub") == 0){
+        else if(id_ex_l.inst.op == SUB){
           ex_mem_l.data = registers[id_ex_l.inst.rs] - registers[id_ex_l.inst.rt];
         }
-        else if(strcmp(id_ex_l.inst.op,"mul") == 0){
+        else if(id_ex_l.inst.op == MUL){
           ex_mem_l.data = registers[id_ex_l.inst.rs] * registers[id_ex_l.inst.rt];
         }
-        else if(strcmp(id_ex_l.inst.op, "beq") == 0){
+        else if(id_ex_l.inst.op  == BEQ){
           if(registers[id_ex_l.inst.rs] == registers[id_ex_l.inst.rt]){
             program_counter = program_counter + id_ex_l.inst.i;
             if(program_counter > haltIndex){
@@ -244,7 +247,7 @@ void EX(){
           }
           branch_pending = false;
         }
-        else if(strcmp(id_ex_l.inst.op,"lw") * strcmp(id_ex_l.inst.op, "sw") == 0){
+        else if(id_ex_l.inst.op == LW || id_ex_l.inst.op == SW){
           if(id_ex_l.inst.i % 4 == 0){
             ex_mem_l.data = registers[id_ex_l.inst.rt];
             ex_mem_l.inst.dest = registers[id_ex_l.inst.rs] + id_ex_l.inst.i/4;
@@ -263,7 +266,7 @@ void EX(){
           ex_mem_l.warmed_up = true;
         }
       }
-      else if(e_cycles < M){
+      else if((e_cycles < M && id_ex_l.inst.op == MUL) || (e_cycles < N && id_ex_l.inst.op != MUL)){
         e_cycles++;
       }
       exUtil++;
@@ -284,9 +287,8 @@ void MEM(){
     else{
       static int m_cycles = 0;
 
-      assert(ex_mem_l.inst.op != NULL);
-      bool is_lw = strcmp(ex_mem_l.inst.op, "lw") == 0;
-      bool is_sw = strcmp(ex_mem_l.inst.op, "sw") == 0;
+      bool is_lw = ex_mem_l.inst.op == LW;
+      bool is_sw = ex_mem_l.inst.op == SW;
 
       if(is_lw || is_sw){
         if(m_cycles == C && !mem_wb_l.valid){
@@ -329,7 +331,7 @@ void MEM(){
 
 void WB(){
   if(mem_wb_l.valid && mem_wb_l.warmed_up){
-    if(strcmp(mem_wb_l.inst.op,"sw") != 0 && strcmp(mem_wb_l.inst.op,"beq") != 0 && strcmp(mem_wb_l.inst.op,"haltSimulation") != 0 && mem_wb_l.inst.dest != 0 && mem_wb_l.inst.type != B){
+    if(mem_wb_l.inst.op != SW && mem_wb_l.inst.op != BEQ && mem_wb_l.inst.op != HALTSIMULATION && mem_wb_l.inst.dest != 0 && mem_wb_l.inst.type != B){
       registers[mem_wb_l.inst.dest] = mem_wb_l.data;
       wbUtil++;
     }   
@@ -576,40 +578,40 @@ int rawHazard(){
   //If we have a hazard on register 0, we really don't actually have a hazard
   instruction inst = if_id_l.inst;
   if(if_id_l.inst.type != B){
-    if(id_ex_l.warmed_up && inst.rs == id_ex_l.inst.dest && strcmp(id_ex_l.inst.op,"sw") != 0){
+    if(id_ex_l.warmed_up && inst.rs == id_ex_l.inst.dest && id_ex_l.inst.op != SW){
       if(inst.rs != 0){
         return inst.rs;
       }
     }
 
-    if(ex_mem_l.warmed_up && inst.rs == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
+    if(ex_mem_l.warmed_up && inst.rs == ex_mem_l.inst.dest && ex_mem_l.inst.op != SW){
       if(inst.rs != 0){
         return inst.rs;
       }
     }
 
-    if(mem_wb_l.warmed_up && inst.rs == mem_wb_l.inst.dest && strcmp(mem_wb_l.inst.op,"sw") != 0){
+    if(mem_wb_l.warmed_up && inst.rs == mem_wb_l.inst.dest && mem_wb_l.inst.op != SW){
       if(inst.rs != 0){
         return inst.rs;
       }
     }
 
 
-    if(inst.type == R || strcmp(inst.op,"beq") == 0){
+    if(inst.type == R || inst.op == BEQ){
       //Need to check that rs and rt aren't targets of future ops
-      if(id_ex_l.warmed_up && inst.rt == id_ex_l.inst.dest && strcmp(id_ex_l.inst.op,"sw") != 0){
+      if(id_ex_l.warmed_up && inst.rt == id_ex_l.inst.dest && id_ex_l.inst.op != SW){
         if(inst.rt != 0){
           return inst.rt;
         }
       }
 
-      if(ex_mem_l.warmed_up && inst.rt == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
+      if(ex_mem_l.warmed_up && inst.rt == ex_mem_l.inst.dest && ex_mem_l.inst.op != SW){
         if(inst.rt != 0){
           return inst.rt;
         }
       }
 
-      if(mem_wb_l.warmed_up && inst.rt == mem_wb_l.inst.dest && strcmp(mem_wb_l.inst.op,"sw") != 0){
+      if(mem_wb_l.warmed_up && inst.rt == mem_wb_l.inst.dest && mem_wb_l.inst.op != SW){
         if(inst.rt != 0){
           return inst.rt;
         }
@@ -617,6 +619,31 @@ int rawHazard(){
     }
   }
   return -1;
+}
+
+opcode stringToOpcode(char* opcode){
+  if(strcmp(opcode,"add") == 0){
+    return ADD;
+  }else if(strcmp(opcode,"addi") == 0){
+    return ADDI;
+  }else if(strcmp(opcode,"sub") == 0){
+    return SUB;
+  }else if(strcmp(opcode,"mul") == 0){
+    return MUL;
+  }else if(strcmp(opcode,"beq") == 0){
+    return BEQ;
+  }else if(strcmp(opcode,"lw") == 0){
+    return LW;
+  }else if(strcmp(opcode,"sw") == 0){
+    return SW;
+  }else if(strcmp(opcode,"bubble") == 0){
+    return BUBBLE;
+  }else if(strcmp(opcode,"haltSimulation") == 0){
+    return HALTSIMULATION;
+  }
+
+
+
 }
 
 void printStatistics(){
