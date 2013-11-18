@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <signal.h>
 
 #define C 10
 #define N 10
@@ -72,8 +71,8 @@ data_latch ex_mem_l = { .warmed_up = false };
 data_latch mem_wb_l = { .warmed_up = false };
 
 bool branch_pending = false;
-bool totally_done = false;
-bool single_cycle_mode = true;
+bool totally_done = false;      //true when haltSimulation has propagated through the pipeline
+bool single_cycle_mode = false; //If true, print registers after each instruction, wait for enter to be pressed
 
 int program_counter = 0;
 int haltIndex = 0;
@@ -87,7 +86,7 @@ int wbUtil = 0;
 char blank[2];
 
 int main(){
-  progScanner("prog1.asy");
+  progScanner("prog8.asy");
   //Once we've read everything in, reset the program_counter
   program_counter = 0;
   //Then start iterating over the pipelined stages in reverse
@@ -235,7 +234,7 @@ void EX(){
         }
         else if(strcmp(id_ex_l.inst.op, "beq") == 0){
           if(registers[id_ex_l.inst.rs] == registers[id_ex_l.inst.rt]){
-            program_counter = program_counter + id_ex_l.inst.i + 1;
+            program_counter = program_counter + id_ex_l.inst.i;
             if(program_counter > haltIndex){
               assert(!"Branched out of program");
             }
@@ -571,32 +570,46 @@ int regValue(char* c){
 
 
 int rawHazard(){
+  //If we have a hazard on register 0, we really don't actually have a hazard
   instruction inst = if_id_l.inst;
   if(if_id_l.inst.type != B){
     if(id_ex_l.warmed_up && inst.rs == id_ex_l.inst.dest && strcmp(id_ex_l.inst.op,"sw") != 0){
-      return inst.rs;
+      if(inst.rs != 0){
+        return inst.rs;
+      }
     }
 
     if(ex_mem_l.warmed_up && inst.rs == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
-      return inst.rs;
+      if(inst.rs != 0){
+        return inst.rs;
+      }
     }
 
     if(mem_wb_l.warmed_up && inst.rs == mem_wb_l.inst.dest && strcmp(mem_wb_l.inst.op,"sw") != 0){
-      return inst.rs;
+      if(inst.rs != 0){
+        return inst.rs;
+      }
     }
+
 
     if(inst.type == R || strcmp(inst.op,"beq") == 0){
       //Need to check that rs and rt aren't targets of future ops
       if(id_ex_l.warmed_up && inst.rt == id_ex_l.inst.dest && strcmp(id_ex_l.inst.op,"sw") != 0){
-        return inst.rt;
+        if(inst.rt != 0){
+          return inst.rt;
+        }
       }
 
       if(ex_mem_l.warmed_up && inst.rt == ex_mem_l.inst.dest && strcmp(ex_mem_l.inst.op,"sw") != 0){
-        return inst.rt;
+        if(inst.rt != 0){
+          return inst.rt;
+        }
       }
 
       if(mem_wb_l.warmed_up && inst.rt == mem_wb_l.inst.dest && strcmp(mem_wb_l.inst.op,"sw") != 0){
-        return inst.rt;
+        if(inst.rt != 0){
+          return inst.rt;
+        }
       }
     }
   }

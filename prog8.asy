@@ -1,3 +1,4 @@
 addi $s0, $zero, 2
-sw $s1, 7($s0) 
+beq $s0, $s0, 1
+addi $s1, $zero, 20
 haltSimulation
