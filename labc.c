@@ -51,7 +51,7 @@ bool isIType(char* opcode);
 int regValue(char*);
 int rawHazard();
 void printStatistics();
-void printRegisters();
+void printRegisters(bool);
 
 //Stage declarations
 void IF();
@@ -83,10 +83,10 @@ int exUtil = 0;
 int memUtil = 0;
 int wbUtil = 0;
 
-char blank[2];
+char blank[2]; //We read the ENTER character into here
 
 int main(){
-  progScanner("prog8.asy");
+  progScanner("prog7.asy");
   //Once we've read everything in, reset the program_counter
   program_counter = 0;
   //Then start iterating over the pipelined stages in reverse
@@ -98,11 +98,13 @@ int main(){
     IF();
     totalCycles++;
     if(single_cycle_mode){
-      printRegisters();
+      printRegisters(true);
+      printStatistics();
       fgets(blank, sizeof blank, stdin);
     }
   }
   printStatistics();
+  printRegisters(false);
   return 0;
 }
 
@@ -165,13 +167,7 @@ void parser(char* inst){
 }
 
 void IF(){
-  //Make sure that the ID stage has invalidated the latch
-  if(branch_pending){
-    if(!if_id_l.valid){
-      if_id_l.valid = true;
-      if_id_l.inst = bubble;
-    }
-  }else{
+  if(!branch_pending){
     if(!if_id_l.valid){
       if_id_l.valid = true;
       if_id_l.inst = instructions[program_counter];
@@ -179,17 +175,24 @@ void IF(){
         program_counter++;
       }
       ifUtil++;
-      branch_pending = strcmp(if_id_l.inst.op,"beq") == 0;
       if(!if_id_l.warmed_up){
         if_id_l.warmed_up = true;
       }
     }
   }
+  else{
+    //We're waiting on a branch, do nothing?
+  }
 }
 
 void ID(){
   if(if_id_l.valid && if_id_l.warmed_up && !id_ex_l.valid){
+    //If there's no hazard
     if(rawHazard() == -1){
+      //If it's a branch, send it along to ex, IF will wait
+      if(strcmp(if_id_l.inst.op,"beq") == 0){
+        branch_pending = true;
+      }
       if_id_l.valid = false;
       id_ex_l.valid = true;
       id_ex_l.inst = if_id_l.inst;
@@ -625,10 +628,12 @@ void printStatistics(){
   printf("Execution Time (Cycles): %d\n",totalCycles);
 }
 
-void printRegisters(){
+void printRegisters(bool take_input){
   int i;
   for(i = 0; i < 32; i++){
     printf("Register $%d: %d\n",i,registers[i]);
   }
-  printf("Press ENTER to continue.\n");
+  if(take_input){
+    printf("Press ENTER to continue.\n");
+  }
 }
