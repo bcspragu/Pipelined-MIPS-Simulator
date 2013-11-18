@@ -89,7 +89,7 @@ int wbUtil = 0;
 char blank[2]; //We read the ENTER character into here
 
 int main(){
-  progScanner("prog1.asy");
+  progScanner("prog8.asy");
   //Once we've read everything in, reset the program_counter
   program_counter = 0;
   //Then start iterating over the pipelined stages in reverse
@@ -113,8 +113,10 @@ int main(){
 
 void progScanner(char* filename){
   char instruction_string[100];
-  assert(fopen(filename,"r")!=NULL);
   FILE *instFile = fopen(filename,"r");
+  if(instFile == NULL){
+    assert(!"Invalid file");
+  }
   while(fgets(instruction_string,100,instFile)){
     parser(instruction_string);
   }
@@ -174,7 +176,6 @@ void IF(){
   if(!branch_pending){
     if(!if_id_l.valid){
       if_id_l.valid = true;
-      assert(&instructions[program_counter]!=NULL);
       if_id_l.inst = instructions[program_counter];
       if(program_counter < haltIndex){
         program_counter++;
@@ -230,7 +231,9 @@ void EX(){
     }
     else{
       if(!ex_mem_l.valid  && ((e_cycles == M && id_ex_l.inst.op == MUL) || (e_cycles == N && id_ex_l.inst.op != MUL)) ){
-	assert((&registers[id_ex_l.inst.rs]!=NULL) && (&registers[id_ex_l.inst.rt]!=NULL));
+        if(id_ex_l.inst.rs > 31 || id_ex_l.inst.rt > 31){
+          assert(!"Invalid register location");
+        }
         if(id_ex_l.inst.op == ADD){
           ex_mem_l.data = registers[id_ex_l.inst.rs] + registers[id_ex_l.inst.rt];
         }
@@ -305,11 +308,15 @@ void MEM(){
             mem_wb_l.warmed_up = true;
           }
           if(is_lw){
-            assert(&data_mem[ex_mem_l.data] != NULL);
+            if(&data_mem[ex_mem_l.data] == NULL){
+              assert(!"Read from invalid data memory location");
+            }
             mem_wb_l.data = data_mem[ex_mem_l.inst.dest];
           }
           if(is_sw){
-            assert(&data_mem[ex_mem_l.data] != NULL);
+            if(&data_mem[ex_mem_l.data] == NULL){
+              assert(!"Attempted to write to invalid data memory location");
+            }
             data_mem[ex_mem_l.inst.dest] = ex_mem_l.data;
           }
         }
@@ -318,7 +325,6 @@ void MEM(){
         }
       }
       else{
-        assert(&ex_mem_l.inst.dest != NULL);
         ex_mem_l.valid = false;
         mem_wb_l.valid = true; 
         mem_wb_l.inst = ex_mem_l.inst;
