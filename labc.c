@@ -113,6 +113,7 @@ int main(){
 
 void progScanner(char* filename){
   char instruction_string[100];
+  assert(fopen(filename,"r")!=NULL);
   FILE *instFile = fopen(filename,"r");
   while(fgets(instruction_string,100,instFile)){
     parser(instruction_string);
@@ -173,6 +174,7 @@ void IF(){
   if(!branch_pending){
     if(!if_id_l.valid){
       if_id_l.valid = true;
+      assert(&instructions[program_counter]!=NULL);
       if_id_l.inst = instructions[program_counter];
       if(program_counter < haltIndex){
         program_counter++;
@@ -190,6 +192,7 @@ void IF(){
 
 void ID(){
   if(if_id_l.valid && if_id_l.warmed_up && !id_ex_l.valid){
+    //Do we need the warmed up if it's Valid?
     //If there's no hazard
     if(rawHazard() == -1){
       //If it's a branch, send it along to ex, IF will wait
@@ -205,6 +208,7 @@ void ID(){
       if(!id_ex_l.warmed_up){
         id_ex_l.warmed_up = true;
       }
+      //Do we want to warm up if the first intruct is a bubble?
     }
     else{
       id_ex_l.valid = true;
@@ -226,6 +230,7 @@ void EX(){
     }
     else{
       if(!ex_mem_l.valid  && ((e_cycles == M && id_ex_l.inst.op == MUL) || (e_cycles == N && id_ex_l.inst.op != MUL)) ){
+	assert((&registers[id_ex_l.inst.rs]!=NULL) && (&registers[id_ex_l.inst.rt]!=NULL));
         if(id_ex_l.inst.op == ADD){
           ex_mem_l.data = registers[id_ex_l.inst.rs] + registers[id_ex_l.inst.rt];
         }
